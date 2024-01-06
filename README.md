@@ -1,5 +1,7 @@
 # Revelio Feature
 
+<img style="display:block; margin: 24px auto"  src="revelio-image.png" width="300" height="300" />
+
 revelio-feature is simple library to reveal/onboard new features to the users in a web or web application
 
 ## Features
