@@ -1,6 +1,6 @@
-# Contributing to bun-library-starter
+# Contributing to revelio-feature
 
-Thank you for your interest in contributing to `bun-library-starter`! This document provides guidelines for contributions to this open-source JavaScript library. By participating in this project, you agree to abide by its terms.
+Thank you for your interest in contributing to `revelio-feature`! This document provides guidelines for contributions to this open-source JavaScript library. By participating in this project, you agree to abide by its terms.
 
 ## Setup for Development
 
@@ -8,14 +8,9 @@ Thank you for your interest in contributing to `bun-library-starter`! This docum
 
 2. **Clone the Repository**: 
    ```bash
-   git clone git@github.com:pedro199288/bun-library-starter.git
-   cd bun-library-starter
+   git clone git@github.com:pedro199288/revelio-feature.git
+   cd revelio-feature
    bun install
-   ```
-
-3. **Set Library Details**: Run the following command to set library-specific details:
-   ```bash
-   bun run scripts/set-library-details.ts
    ```
 
 ## Making Contributions
@@ -36,7 +31,7 @@ Thank you for your interest in contributing to `bun-library-starter`! This docum
 
 6. **Push Your Changes**: Push your changes to your fork.
 
-7. **Create a Pull Request**: Submit a pull request from your fork to the main `bun-library-starter` repository. Describe your changes and reference any related issue(s).
+7. **Create a Pull Request**: Submit a pull request from your fork to the main `revelio-feature` repository. Describe your changes and reference any related issue(s).
 
 ## Coding Standards
 
@@ -70,4 +65,4 @@ Thank you for your interest in contributing to `bun-library-starter`! This docum
 
 ## License
 
-By contributing to `bun-library-starter`, you agree that your contributions will be licensed under the MIT License.
+By contributing to `revelio-feature`, you agree that your contributions will be licensed under the MIT License.
