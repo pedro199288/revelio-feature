@@ -243,7 +243,6 @@ export class Revelio {
     overlay.id = 'revelio-overlay'
 
     overlay.onclick = () => {
-      console.log('overlay clicked')
       this.end()
     }
 
@@ -251,10 +250,6 @@ export class Revelio {
   }
 
   private renderStepDialog(step: JourneyStep, elementPosition: { top: number, left: number, }, elementDimensions: { width: number, height: number }) {
-    console.log({
-      step: step.element, elementPosition, elementDimensions
-    })
-
     const dialog = document.createElement('div')
     dialog.style.position = 'absolute'
     dialog.style.zIndex = '10000'
@@ -268,7 +263,7 @@ export class Revelio {
     dialog.style.width = '300px'
     dialog.id = 'revelio-dialog'
 
-    // Set CSS to make it invisible
+    // Set CSS to make it invisible until we have the correct position
     dialog.style.visibility = 'hidden';
 
     const title = document.createElement('h3')
@@ -328,10 +323,12 @@ export class Revelio {
 
     this.rootElement.appendChild(dialog)
 
+
+    // TODO: refactor this to be a separate function to get the position and dimensions of the dialog
     const dialogBoundingRect = dialog.getBoundingClientRect()
-    console.log('dialogBoundingRect', dialogBoundingRect)
     const dialogBorderBoxWidth = dialogBoundingRect.width + this.dialogMargin * 2
     const dialogBorderBoxHeight = dialogBoundingRect.height + this.dialogMargin * 2
+    
     // get dialog top and left position, take into account the dialog does not overflow the root element
     const rootElementRect = this.rootElement.getBoundingClientRect()
     const rootElementWidth = rootElementRect.width
@@ -390,11 +387,8 @@ export class Revelio {
   }
 
   public start() {
-    console.log('starting touddddr')
     this.currentIndex = 0
     this.setStepProps()
-
-    console.log('initial step', this.currentIndex)
 
     // render overlay on root element
     this.renderOverlay()
@@ -432,7 +426,6 @@ export class Revelio {
     if (!element.getAttribute('style')?.trim()) {
       element.removeAttribute('style')
     }
-
   }
 
   public nextStep() {
@@ -442,12 +435,9 @@ export class Revelio {
     }
 
     this.unmountStep()
+    
     this.currentIndex += 1
-
     this.setStepProps()
-
-    console.log('step', this.currentIndex)
-
     this.mountStep()
   }
 
@@ -458,13 +448,9 @@ export class Revelio {
     }
 
     this.unmountStep()
-
+    
     this.currentIndex -= 1
-
     this.setStepProps()
-
-    console.log('step', this.currentIndex)
-
     this.mountStep()
   }
 }
