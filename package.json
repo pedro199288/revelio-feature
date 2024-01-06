@@ -1,7 +1,7 @@
 {
-  "name": "bun-library-starter",
-  "version": "0.10.0",
-  "description": "A starter project for creating library with bun",
+  "name": "revelio-feature",
+  "version": "0.0.0",
+  "description": "Simple library to reveal/onboard new features to the users in a web or web application",
   "author": "Pedro Monteagudo (https://github.com/pedro199288)",
   "main": "dist/index.js",
   "scripts": {
@@ -28,5 +28,7 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "repository": "github:pedro199288/revelio-feature",
+  "license": "MIT"
 }
