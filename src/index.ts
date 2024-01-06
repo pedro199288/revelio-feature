@@ -1,5 +1,3 @@
-import Revelio from './revelio'
+import Revelio from './revelio';
 
-export {
-  Revelio
-}
+export { Revelio };
