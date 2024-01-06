@@ -1,6 +1,5 @@
-export function greet(name: string): string {
-  console.log(`Hello, ${name}!`);
-  return `Hello, ${name}!`;
-}
+import Revelio from './revelio'
 
-greet("World!!");
+export {
+  Revelio
+}
