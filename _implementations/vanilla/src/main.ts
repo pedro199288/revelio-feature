@@ -1,8 +1,8 @@
-import './style.css'
-import typescriptLogo from './typescript.svg'
-import viteLogo from '/vite.svg'
-import { setupCounter } from './counter.ts'
-import { Revelio } from 'bun-library-starter'
+import './style.css';
+import typescriptLogo from './typescript.svg';
+import viteLogo from '/vite.svg';
+import { setupCounter } from './counter.ts';
+import { Revelio } from 'bun-library-starter';
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>
@@ -29,10 +29,9 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       Click on the Vite and TypeScript logos to learn more
     </p>
   </div>
-`
+`;
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
-
+setupCounter(document.querySelector<HTMLButtonElement>('#counter')!);
 
 const tour = new Revelio({
   journey: [
@@ -41,72 +40,71 @@ const tour = new Revelio({
       content: 'This is the counter button',
       element: '#counter',
       options: {
-        placement: 'right'
-      }
+        placement: 'right',
+      },
     },
     {
       title: 'Second',
       content: '',
       element: '#step-2',
       options: {
-        placement: 'right'
-      }
+        placement: 'right',
+      },
     },
     {
       title: 'Third',
       content: '',
       element: '#step-3',
       options: {
-        placement: 'right'
-      }
+        placement: 'right',
+      },
     },
     {
       title: 'Tour',
       content: 'This is the tour button',
       element: '#tour',
       options: {
-        placement: 'right'
-      }
+        placement: 'right',
+      },
     },
     {
       title: 'Read the docs',
       content: 'Click on the Vite and TypeScript logos to learn more',
       element: '.read-the-docs',
       options: {
-        placement: 'top'
-      }
+        placement: 'top',
+      },
     },
     {
       title: 'Vite',
       content: 'Vite is a fast build tool for modern web projects',
       element: '#app a:nth-child(1) .logo',
       options: {
-        placement: 'bottom'
-      }
+        placement: 'bottom',
+      },
     },
     {
       title: 'TypeScript',
-      content: 'TypeScript is a typed superset of JavaScript that compiles to plain JavaScript',
+      content:
+        'TypeScript is a typed superset of JavaScript that compiles to plain JavaScript',
       element: '#app a:nth-child(2) .logo',
       options: {
-        placement: 'bottom'
-      }
+        placement: 'bottom',
+      },
     },
     {
       title: 'The end',
       content: 'This is the end of the tour',
       element: '#app',
       options: {
-        placement: 'top'
-      }
-    }
-  ]
-}
-)
-
+        placement: 'top',
+      },
+    },
+  ],
+});
 
 function startTour() {
-  tour.start()
+  tour.start();
 }
 
-document.querySelector<HTMLButtonElement>('#tour')!.onclick = startTour
+document.querySelector<HTMLButtonElement>('#tour')!.onclick = startTour;
