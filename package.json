@@ -4,7 +4,6 @@
   "description": "Simple library to reveal/onboard new features to the users in a web or web application",
   "author": "Pedro Monteagudo (https://github.com/pedro199288)",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "scripts": {
     "start": "bun src/index.ts",
     "dev": "bun --watch src/index.ts",
