@@ -2,7 +2,7 @@ import './style.css';
 import typescriptLogo from './typescript.svg';
 import viteLogo from '/vite.svg';
 import { setupCounter } from './counter.ts';
-import { Revelio } from 'bun-library-starter';
+import { Revelio } from 'revelio-feature';
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>

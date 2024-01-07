@@ -15,11 +15,9 @@ jobs:
         with:
           bun-version: latest
 
-      # install root dependencies and _implementations/** dependencies
       - name: Install Dependencies
         run: |
           bun install
-          cd _implementations/vanilla && bun install
 
       - name: Type checking
         run: bun run typecheck
