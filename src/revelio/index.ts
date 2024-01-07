@@ -368,8 +368,13 @@ export class Revelio {
         );
         break;
     }
-    console.log('dialogLeft', dialogLeft);
-    console.log('dialogTop', dialogTop);
+
+    if (dialogLeft < 0) {
+      dialogLeft = 0;
+    }
+    if (dialogTop < 0) {
+      dialogTop = 0;
+    }
 
     dialog.style.top = `${dialogTop}px`;
     dialog.style.left = `${dialogLeft}px`;
@@ -459,18 +464,53 @@ export class Revelio {
     this.setDialogPosition(dialog, elementPosition, elementDimensions);
   }
 
-  private higlightStepElement(step: JourneyStep) {
+  private highlightStepElement(step: JourneyStep) {
     const element = this.getStepElement(step.element);
     element.style.zIndex = '10000';
     element.style.position = 'relative';
 
-    // return the position of the element relative to the root element
+    // get the position and dimensions
     const rect = element.getBoundingClientRect();
     const rootRect = this.rootElement.getBoundingClientRect();
     const top = rect.top - rootRect.top;
     const left = rect.left - rootRect.left;
-    const width = rect.width;
-    const height = rect.height;
+    const { width, height } = rect;
+
+    // create a div that blinks over the element
+    const blinkOverlay = document.createElement('div');
+    blinkOverlay.style.position = 'absolute';
+    blinkOverlay.style.top = `${top}px`;
+    blinkOverlay.style.left = `${left}px`;
+    blinkOverlay.style.width = `${width}px`;
+    blinkOverlay.style.height = `${height}px`;
+    blinkOverlay.style.backgroundColor = 'white';
+    blinkOverlay.style.opacity = '0';
+    blinkOverlay.style.zIndex = '10000';
+    blinkOverlay.style.pointerEvents = 'none';
+    blinkOverlay.style.borderRadius =
+      window.getComputedStyle(element).borderRadius;
+    blinkOverlay.id = 'revelio-blink-overlay';
+
+    this.rootElement.appendChild(blinkOverlay);
+
+    blinkOverlay.animate(
+      [
+        {
+          opacity: 0,
+        },
+        {
+          opacity: 0.3,
+        },
+        {
+          opacity: 0,
+        },
+      ],
+      {
+        duration: 1000,
+        iterations: 1,
+        easing: 'ease-in',
+      },
+    );
 
     return {
       position: {
@@ -500,7 +540,7 @@ export class Revelio {
    */
   private mountStep() {
     const step = this.getCurrentStep();
-    const { position, dimensions } = this.higlightStepElement(step);
+    const { position, dimensions } = this.highlightStepElement(step);
     this.renderStepDialog(step, position, dimensions);
   }
 
@@ -511,7 +551,7 @@ export class Revelio {
     // render overlay on root element
     this.renderOverlay();
 
-    // higlight the element for the current step
+    // highlight the element for the current step
     this.mountStep();
   }
 
@@ -523,6 +563,8 @@ export class Revelio {
     }
 
     this.unmountStep();
+
+    this.currentIndex = 0;
 
     // call onEnd
     this.onEnd?.();
@@ -543,6 +585,13 @@ export class Revelio {
 
     if (!element.getAttribute('style')?.trim()) {
       element.removeAttribute('style');
+    }
+
+    const blinkOverlay = this.rootElement.querySelector(
+      '#revelio-blink-overlay',
+    );
+    if (blinkOverlay) {
+      this.rootElement.removeChild(blinkOverlay);
     }
   }
 
