@@ -117,11 +117,11 @@ type JourneyStep = {
   element: string | HTMLElement;
   title: string;
   content: string;
-  options: Partial<RevelioSharedConfig>;
+  options?: Partial<RevelioSharedConfig>;
 };
 
 const defaultOptions: RevelioOptions = {
-  placement: 'top',
+  placement: 'bottom',
   dialogPadding: 16,
   dialogMaxWidth: 300,
   dialogMaxHeight: 300,
@@ -134,7 +134,7 @@ const defaultOptions: RevelioOptions = {
   showNextBtn: true,
   showSkipBtn: true,
   showDoneBtn: true,
-  overlayColor: 'rgba(0, 0, 0, 0.5)',
+  overlayColor: 'rgba(0, 0, 0, 0.78)',
 };
 
 export class Revelio {
@@ -155,6 +155,7 @@ export class Revelio {
    */
   private currentIndex: number;
 
+  private placement: RevelioOptions['placement'] = defaultOptions.placement;
   private dialogPadding: RevelioOptions['dialogPadding'] =
     defaultOptions.dialogPadding;
   private dialogMaxWidth: RevelioOptions['dialogMaxWidth'] =
@@ -229,6 +230,8 @@ export class Revelio {
 
   private setStepProps() {
     const stepOptions = this.journey[this.currentIndex]?.options;
+    this.placement =
+      stepOptions?.placement ?? this.baseConfig.placement ?? this.placement;
     this.dialogPadding =
       stepOptions?.dialogPadding ??
       this.baseConfig.dialogPadding ??
@@ -261,22 +264,17 @@ export class Revelio {
       stepOptions?.doneBtnText ??
       this.baseConfig.doneBtnText ??
       this.doneBtnText;
-    this.showPrevBtn =
-      stepOptions?.showPrevBtn ??
-      this.baseConfig.showPrevBtn ??
-      this.showPrevBtn;
+    this.showPrevBtn = stepOptions?.showPrevBtn ?? this.currentIndex > 0;
     this.showNextBtn =
-      stepOptions?.showNextBtn ??
-      this.baseConfig.showNextBtn ??
-      this.showNextBtn;
+      stepOptions?.showNextBtn ?? this.currentIndex < this.journey.length - 1;
     this.showSkipBtn =
       stepOptions?.showSkipBtn ??
-      this.baseConfig.showSkipBtn ??
-      this.showSkipBtn;
+      (this.currentIndex < this.journey.length - 1 &&
+        (this.baseConfig.showSkipBtn ?? this.showSkipBtn));
     this.showDoneBtn =
       stepOptions?.showDoneBtn ??
-      this.baseConfig.showDoneBtn ??
-      this.showDoneBtn;
+      (this.currentIndex === this.journey.length - 1 &&
+        (this.baseConfig.showDoneBtn ?? this.showDoneBtn));
     this.onStart =
       stepOptions?.onStart ?? this.baseConfig.onStart ?? this.onStart;
     this.onEnd = stepOptions?.onEnd ?? this.baseConfig.onEnd ?? this.onEnd;
@@ -305,6 +303,79 @@ export class Revelio {
     };
 
     this.rootElement.appendChild(overlay);
+  }
+
+  private setDialogPosition(
+    dialog: HTMLElement,
+    elementPosition: { top: number; left: number },
+    elementDimensions: { width: number; height: number },
+  ) {
+    const dialogBoundingRect = dialog.getBoundingClientRect();
+    const dialogBorderBoxWidth =
+      dialogBoundingRect.width + this.dialogMargin * 2;
+    const dialogBorderBoxHeight =
+      dialogBoundingRect.height + this.dialogMargin * 2;
+    const elementXCenter = elementPosition.left + elementDimensions.width / 2;
+    const elementYCenter = elementPosition.top + elementDimensions.height / 2;
+
+    // get dialog top and left position, take into account the dialog does not overflow the root element
+    const rootElementRect = this.rootElement.getBoundingClientRect();
+    const rootElementWidth = rootElementRect.width;
+    const rootElementHeight = rootElementRect.height;
+
+    console.log('this.placement', this.placement);
+    let dialogLeft: number = 0,
+      dialogTop: number = 0;
+
+    switch (this.placement) {
+      case 'right':
+      default:
+        console.log('getting for right');
+        dialogLeft = Math.min(
+          elementPosition.left + elementDimensions.width,
+          rootElementWidth - dialogBorderBoxWidth,
+        );
+        dialogTop = Math.min(
+          elementYCenter - dialogBorderBoxHeight / 2,
+          rootElementHeight - dialogBorderBoxHeight,
+        );
+        break;
+      case 'left':
+        console.log('getting for left');
+        dialogLeft = Math.max(elementPosition.left - dialogBorderBoxWidth, 0);
+        dialogTop = Math.min(
+          elementYCenter - dialogBorderBoxHeight / 2,
+          rootElementHeight - dialogBorderBoxHeight,
+        );
+        break;
+      case 'top':
+        console.log('getting for top');
+        dialogLeft = Math.min(
+          elementXCenter - dialogBorderBoxWidth / 2,
+          rootElementWidth - dialogBorderBoxWidth,
+        );
+        dialogTop = Math.max(elementPosition.top - dialogBorderBoxHeight, 0);
+        break;
+      case 'bottom':
+        console.log('getting for bottom');
+        dialogLeft = Math.min(
+          elementXCenter - dialogBorderBoxWidth / 2,
+          rootElementWidth - dialogBorderBoxWidth,
+        );
+        dialogTop = Math.min(
+          elementPosition.top + elementDimensions.height,
+          rootElementHeight - dialogBorderBoxHeight,
+        );
+        break;
+    }
+    console.log('dialogLeft', dialogLeft);
+    console.log('dialogTop', dialogTop);
+
+    dialog.style.top = `${dialogTop}px`;
+    dialog.style.left = `${dialogLeft}px`;
+
+    // Set CSS to make it visible
+    dialog.style.visibility = '';
   }
 
   private renderStepDialog(
@@ -385,30 +456,7 @@ export class Revelio {
 
     this.rootElement.appendChild(dialog);
 
-    // TODO: refactor this to be a separate function to get the position and dimensions of the dialog
-    const dialogBoundingRect = dialog.getBoundingClientRect();
-    const dialogBorderBoxWidth =
-      dialogBoundingRect.width + this.dialogMargin * 2;
-    const dialogBorderBoxHeight =
-      dialogBoundingRect.height + this.dialogMargin * 2;
-
-    // get dialog top and left position, take into account the dialog does not overflow the root element
-    const rootElementRect = this.rootElement.getBoundingClientRect();
-    const rootElementWidth = rootElementRect.width;
-    const rootElementHeight = rootElementRect.height;
-    const dialogLeft = Math.min(
-      elementPosition.left + elementDimensions.width,
-      rootElementWidth - dialogBorderBoxWidth,
-    );
-    const dialogTop = Math.min(
-      elementPosition.top + elementDimensions.height,
-      rootElementHeight - dialogBorderBoxHeight,
-    );
-    dialog.style.top = `${dialogTop}px`;
-    dialog.style.left = `${dialogLeft}px`;
-
-    // Set CSS to make it visible
-    dialog.style.visibility = '';
+    this.setDialogPosition(dialog, elementPosition, elementDimensions);
   }
 
   private higlightStepElement(step: JourneyStep) {

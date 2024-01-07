@@ -48,7 +48,7 @@ const tour = new Revelio({
       content: '',
       element: '#step-2',
       options: {
-        placement: 'right',
+        placement: 'top',
       },
     },
     {
@@ -56,49 +56,49 @@ const tour = new Revelio({
       content: '',
       element: '#step-3',
       options: {
-        placement: 'right',
+        placement: 'bottom',
       },
     },
     {
       title: 'Tour',
       content: 'This is the tour button',
       element: '#tour',
-      options: {
-        placement: 'right',
-      },
+      // options: {
+      //   placement: 'right',
+      // },
     },
     {
       title: 'Read the docs',
       content: 'Click on the Vite and TypeScript logos to learn more',
       element: '.read-the-docs',
-      options: {
-        placement: 'top',
-      },
+      // options: {
+      //   placement: 'right',
+      // },
     },
     {
       title: 'Vite',
       content: 'Vite is a fast build tool for modern web projects',
       element: '#app a:nth-child(1) .logo',
-      options: {
-        placement: 'bottom',
-      },
+      // options: {
+      //   placement: 'right',
+      // },
     },
     {
       title: 'TypeScript',
       content:
         'TypeScript is a typed superset of JavaScript that compiles to plain JavaScript',
       element: '#app a:nth-child(2) .logo',
-      options: {
-        placement: 'bottom',
-      },
+      // options: {
+      //   placement: 'right',
+      // },
     },
     {
       title: 'The end',
       content: 'This is the end of the tour',
       element: '#app',
-      options: {
-        placement: 'top',
-      },
+      // options: {
+      //   placement: 'right',
+      // },
     },
   ],
 });
