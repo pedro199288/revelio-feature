@@ -1,3 +1,5 @@
+import { arrayFromString, getNumberFromString } from '../utils';
+
 /**
  * Config that is shared between the 'options' and 'journey.[].options' properties
  */
@@ -8,29 +10,44 @@ type RevelioSharedConfig = {
   placement: 'top' | 'bottom' | 'left' | 'right';
 
   /**
-   * The padding around the dialog content.
-   */
-  dialogPadding: number;
-
-  /**
-   * The max width of the dialog content.
-   */
-  dialogMaxWidth: number;
-
-  /**
-   * The max height of the dialog content.
-   */
-  dialogMaxHeight: number;
-
-  /**
-   * The margin around the dialog content.
-   */
-  dialogMargin: number;
-
-  /**
    * Determines whether the step dialog should be scrolled into view.
    */
   preventScrollIntoView: boolean;
+
+  /**
+   * Determines whether to show the step number and total steps.
+   */
+  showStepsInfo: boolean;
+
+  /**
+   * The css class to apply to the dialog.
+   */
+  dialogClass: string;
+
+  /**
+   * The css class to apply to the dialog title.
+   */
+  titleClass: string;
+
+  /**
+   * The css class to apply to the dialog content.
+   */
+  contentClass: string;
+
+  /**
+   * The css class to apply to the dialog steps info.
+   */
+  stepsInfoClass: string;
+
+  /**
+   * The css class to apply to the buttons.
+   */
+  btnClass: string;
+
+  /**
+   * Determines whether to prevent default styles from being applied to the dialog.
+   */
+  preventDefaultStyles: boolean;
 
   /**
    * The text to display on the previous button.
@@ -122,16 +139,22 @@ type JourneyStep = {
   element: string | HTMLElement;
   title: string;
   content: string;
+  /**
+   * The options for the step. These will override the global options.
+   */
   options?: Partial<RevelioSharedConfig>;
 };
 
 const defaultOptions: RevelioOptions = {
   placement: 'bottom',
-  dialogPadding: 16,
-  dialogMaxWidth: 300,
-  dialogMaxHeight: 300,
-  dialogMargin: 16,
   preventScrollIntoView: false,
+  showStepsInfo: true,
+  dialogClass: '',
+  titleClass: '',
+  contentClass: '',
+  stepsInfoClass: '',
+  btnClass: '',
+  preventDefaultStyles: false,
   prevBtnText: 'Prev',
   nextBtnText: 'Next',
   skipBtnText: 'Skip',
@@ -163,16 +186,20 @@ export class Revelio {
   private currentIndex: number;
 
   private placement: RevelioOptions['placement'] = defaultOptions.placement;
-  private dialogPadding: RevelioOptions['dialogPadding'] =
-    defaultOptions.dialogPadding;
-  private dialogMaxWidth: RevelioOptions['dialogMaxWidth'] =
-    defaultOptions.dialogMaxWidth;
-  private dialogMaxHeight: RevelioOptions['dialogMaxHeight'] =
-    defaultOptions.dialogMaxHeight;
-  private dialogMargin: RevelioOptions['dialogMargin'] =
-    defaultOptions.dialogMargin;
   private preventScrollIntoView: RevelioOptions['preventScrollIntoView'] =
     defaultOptions.preventScrollIntoView;
+  private showStepsInfo: RevelioOptions['showStepsInfo'] =
+    defaultOptions.showStepsInfo;
+  private dialogClass: RevelioOptions['dialogClass'] =
+    defaultOptions.dialogClass;
+  private titleClass: RevelioOptions['titleClass'] = defaultOptions.titleClass;
+  private contentClass: RevelioOptions['contentClass'] =
+    defaultOptions.contentClass;
+  private stepsInfoClass: RevelioOptions['stepsInfoClass'] =
+    defaultOptions.stepsInfoClass;
+  private btnClass: RevelioOptions['btnClass'] = defaultOptions.btnClass;
+  private preventDefaultStyles: RevelioOptions['preventDefaultStyles'] =
+    defaultOptions.preventDefaultStyles;
   private prevBtnText: RevelioOptions['prevBtnText'] =
     defaultOptions.prevBtnText;
   private nextBtnText: RevelioOptions['nextBtnText'] =
@@ -201,8 +228,17 @@ export class Revelio {
     rootElement,
     options,
   }: {
+    /**
+     * The feature journey steps for the Revelio instance
+     */
     journey: JourneyStep[];
+    /**
+     * The root element for the Revelio instance
+     */
     rootElement?: HTMLElement | string;
+    /**
+     * The global options for the Revelio instance. Will be applied to all steps unless overridden by the step's options.
+     */
     options?: Partial<RevelioOptions>;
   }) {
     this.baseConfig = {
@@ -241,26 +277,34 @@ export class Revelio {
     const stepOptions = this.journey[this.currentIndex]?.options;
     this.placement =
       stepOptions?.placement ?? this.baseConfig.placement ?? this.placement;
-    this.dialogPadding =
-      stepOptions?.dialogPadding ??
-      this.baseConfig.dialogPadding ??
-      this.dialogPadding;
-    this.dialogMaxWidth =
-      stepOptions?.dialogMaxWidth ??
-      this.baseConfig.dialogMaxWidth ??
-      this.dialogMaxWidth;
-    this.dialogMaxHeight =
-      stepOptions?.dialogMaxHeight ??
-      this.baseConfig.dialogMaxHeight ??
-      this.dialogMaxHeight;
-    this.dialogMargin =
-      stepOptions?.dialogMargin ??
-      this.baseConfig.dialogMargin ??
-      this.dialogMargin;
     this.preventScrollIntoView =
       stepOptions?.preventScrollIntoView ??
       this.baseConfig.preventScrollIntoView ??
       this.preventScrollIntoView;
+    this.showStepsInfo =
+      stepOptions?.showStepsInfo ??
+      this.baseConfig.showStepsInfo ??
+      this.showStepsInfo;
+    this.dialogClass =
+      stepOptions?.dialogClass ??
+      this.baseConfig.dialogClass ??
+      this.dialogClass;
+    this.titleClass =
+      stepOptions?.titleClass ?? this.baseConfig.titleClass ?? this.titleClass;
+    this.contentClass =
+      stepOptions?.contentClass ??
+      this.baseConfig.contentClass ??
+      this.contentClass;
+    this.stepsInfoClass =
+      stepOptions?.stepsInfoClass ??
+      this.baseConfig.stepsInfoClass ??
+      this.stepsInfoClass;
+    this.btnClass =
+      stepOptions?.btnClass ?? this.baseConfig.btnClass ?? this.btnClass;
+    this.preventDefaultStyles =
+      stepOptions?.preventDefaultStyles ??
+      this.baseConfig.preventDefaultStyles ??
+      this.preventDefaultStyles;
     this.prevBtnText =
       stepOptions?.prevBtnText ??
       this.baseConfig.prevBtnText ??
@@ -324,10 +368,10 @@ export class Revelio {
     elementDimensions: { width: number; height: number },
   ) {
     const dialogBoundingRect = dialog.getBoundingClientRect();
-    const dialogBorderBoxWidth =
-      dialogBoundingRect.width + this.dialogMargin * 2;
-    const dialogBorderBoxHeight =
-      dialogBoundingRect.height + this.dialogMargin * 2;
+    const dialogComputedStyle = window.getComputedStyle(dialog);
+    const dialogMargin = getNumberFromString(dialogComputedStyle.margin);
+    const dialogBorderBoxWidth = dialogBoundingRect.width + dialogMargin * 2;
+    const dialogBorderBoxHeight = dialogBoundingRect.height + dialogMargin * 2;
     const elementXCenter = elementPosition.left + elementDimensions.width / 2;
     const elementYCenter = elementPosition.top + elementDimensions.height / 2;
 
@@ -336,7 +380,6 @@ export class Revelio {
     const rootElementWidth = rootElementRect.width;
     const rootElementHeight = rootElementRect.height;
 
-    console.log('this.placement', this.placement);
     let dialogLeft: number = 0,
       dialogTop: number = 0;
 
@@ -396,81 +439,165 @@ export class Revelio {
     dialog.style.visibility = '';
   }
 
+  private createDialog() {
+    const dialog = document.createElement('div');
+    if (!this.preventDefaultStyles) {
+      // dialog default styles
+      dialog.style.backgroundColor = 'white';
+      dialog.style.maxWidth = '300px';
+      dialog.style.maxHeight = '300px';
+      dialog.style.overflowY = 'auto';
+      dialog.style.padding = '1rem';
+      dialog.style.margin = '1rem';
+      dialog.style.borderRadius = '0.5rem';
+      dialog.style.boxShadow = '0 0 0.5rem rgba(0, 0, 0, 0.5)';
+      dialog.style.width = '300px';
+    }
+    dialog.id = 'revelio-dialog';
+    // required styles
+    dialog.style.position = 'absolute';
+    dialog.style.zIndex = '10000';
+    // Set CSS to make it invisible until we have the correct position
+    dialog.style.visibility = 'hidden';
+
+    // dialog class
+    if (this.dialogClass) {
+      dialog.classList.add(...arrayFromString(this.dialogClass));
+    }
+
+    return dialog;
+  }
+
+  private createTitle(step: JourneyStep) {
+    const title = document.createElement('div');
+    title.textContent = step.title;
+    if (!this.preventDefaultStyles) {
+      title.style.fontWeight = 'bold';
+      title.style.fontSize = '1.5rem';
+      title.style.marginBottom = '1rem';
+    }
+    if (this.titleClass) {
+      title.classList.add(...arrayFromString(this.titleClass));
+    }
+    return title;
+  }
+
+  private createContent(step: JourneyStep) {
+    const content = document.createElement('div');
+    content.innerHTML = step.content;
+    if (this.contentClass) {
+      content.classList.add(...arrayFromString(this.contentClass));
+    }
+    return content;
+  }
+
+  private createStepsInfo() {
+    const stepsInfo = document.createElement('div');
+    if (!this.preventDefaultStyles) {
+      stepsInfo.style.display = 'flex';
+      stepsInfo.style.justifyContent = 'center';
+      stepsInfo.style.marginTop = '0.5rem';
+      stepsInfo.style.marginBottom = '1rem';
+      stepsInfo.style.fontSize = '0.75rem';
+      stepsInfo.style.color = 'rgba(0, 0, 0, 0.5)';
+    }
+    stepsInfo.textContent = `${this.currentIndex + 1}/${this.journey.length}`;
+    if (this.stepsInfoClass) {
+      stepsInfo.classList.add(...arrayFromString(this.stepsInfoClass));
+    }
+    return stepsInfo;
+  }
+
+  private createButton(text: string, onClick: () => void) {
+    const btn = document.createElement('button');
+    btn.textContent = text;
+    btn.addEventListener('click', onClick);
+    if (!this.preventDefaultStyles) {
+      btn.style.padding = '0.25rem 1rem';
+      btn.style.borderRadius = '0.25rem';
+      btn.style.border = 'none';
+      btn.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
+      btn.style.cursor = 'pointer';
+      btn.style.fontWeight = '600';
+      btn.style.fontSize = '1rem';
+    }
+    if (this.btnClass) {
+      btn.classList.add(...arrayFromString(this.btnClass));
+    }
+    return btn;
+  }
+
+  private createButtonsContainer() {
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.style.display = 'grid';
+    buttonsContainer.style.gridTemplateColumns = '1fr 1fr 1fr';
+    buttonsContainer.style.gap = '1rem';
+    buttonsContainer.style.marginTop = '1rem';
+
+    const prevBtnContainer = document.createElement('div');
+    const nextBtnContainer = document.createElement('div');
+    const centerBtnContainer = document.createElement('div');
+    prevBtnContainer.style.justifySelf = 'start';
+    nextBtnContainer.style.justifySelf = 'end';
+    centerBtnContainer.style.justifySelf = 'center';
+
+    if (this.showPrevBtn) {
+      const prevBtn = this.createButton(this.prevBtnText, () => {
+        this.onPrev?.();
+        this.prevStep();
+      });
+      prevBtnContainer.appendChild(prevBtn);
+    }
+
+    if (this.showNextBtn) {
+      const nextBtn = this.createButton(this.nextBtnText, () => {
+        this.onNext?.();
+        this.nextStep();
+      });
+      nextBtnContainer.appendChild(nextBtn);
+    }
+
+    if (this.showDoneBtn) {
+      const doneBtn = this.createButton(this.doneBtnText, () => {
+        this.onDone?.();
+        this.end();
+      });
+      nextBtnContainer.appendChild(doneBtn);
+    }
+
+    if (this.showSkipBtn) {
+      const skipBtn = this.createButton(this.skipBtnText, () => {
+        this.onSkip?.();
+        this.end();
+      });
+      centerBtnContainer.appendChild(skipBtn);
+    }
+
+    buttonsContainer.appendChild(prevBtnContainer);
+    buttonsContainer.appendChild(centerBtnContainer);
+    buttonsContainer.appendChild(nextBtnContainer);
+    return buttonsContainer;
+  }
+
   private renderStepDialog(
     step: JourneyStep,
     elementPosition: { top: number; left: number },
     elementDimensions: { width: number; height: number },
   ) {
-    const dialog = document.createElement('div');
-    dialog.style.position = 'absolute';
-    dialog.style.zIndex = '10000';
-    dialog.style.maxWidth = `${this.dialogMaxWidth}px`;
-    dialog.style.maxHeight = `${this.dialogMaxHeight}px`;
-    dialog.style.backgroundColor = 'white';
-    dialog.style.padding = `${this.dialogPadding}px`;
-    dialog.style.borderRadius = '0.5rem';
-    dialog.style.boxShadow = '0 0 0.5rem rgba(0, 0, 0, 0.5)';
-    dialog.style.margin = `${this.dialogPadding}px`;
-    dialog.style.width = '300px';
-    dialog.id = 'revelio-dialog';
-
-    // Set CSS to make it invisible until we have the correct position
-    dialog.style.visibility = 'hidden';
-
-    const title = document.createElement('h3');
-    title.style.color = 'black';
-    title.textContent = step.title;
+    const dialog = this.createDialog();
+    const title = this.createTitle(step);
     dialog.appendChild(title);
-
-    const content = document.createElement('p');
-    content.style.color = 'black';
-    content.textContent = step.content;
+    const content = this.createContent(step);
     dialog.appendChild(content);
 
-    const buttons = document.createElement('div');
-    buttons.style.display = 'flex';
-    buttons.style.justifyContent = 'space-between';
-    dialog.appendChild(buttons);
-
-    if (this.showPrevBtn) {
-      const prevBtn = document.createElement('button');
-      prevBtn.textContent = this.prevBtnText;
-      prevBtn.addEventListener('click', () => {
-        this.onPrev?.();
-        this.prevStep();
-      });
-      buttons.appendChild(prevBtn);
+    if (this.showStepsInfo) {
+      const stepsInfo = this.createStepsInfo();
+      dialog.appendChild(stepsInfo);
     }
 
-    if (this.showNextBtn) {
-      const nextBtn = document.createElement('button');
-      nextBtn.textContent = this.nextBtnText;
-      nextBtn.addEventListener('click', () => {
-        this.onNext?.();
-        this.nextStep();
-      });
-      buttons.appendChild(nextBtn);
-    }
+    const buttonsContainer = this.createButtonsContainer();
 
-    if (this.showSkipBtn) {
-      const skipBtn = document.createElement('button');
-      skipBtn.textContent = this.skipBtnText;
-      skipBtn.addEventListener('click', () => {
-        this.onSkip?.();
-        this.end();
-      });
-      buttons.appendChild(skipBtn);
-    }
-
-    if (this.showDoneBtn) {
-      const doneBtn = document.createElement('button');
-      doneBtn.textContent = this.doneBtnText;
-      doneBtn.addEventListener('click', () => {
-        this.onDone?.();
-        this.end();
-      });
-      buttons.appendChild(doneBtn);
-    }
+    dialog.appendChild(buttonsContainer);
 
     this.rootElement.appendChild(dialog);
 
@@ -491,11 +618,11 @@ export class Revelio {
     element.style.position = 'relative';
 
     // get the position and dimensions
-    const rect = element.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
     const rootRect = this.rootElement.getBoundingClientRect();
-    const top = rect.top - rootRect.top;
-    const left = rect.left - rootRect.left;
-    const { width, height } = rect;
+    const top = elementRect.top - rootRect.top;
+    const left = elementRect.left - rootRect.left;
+    const { width, height } = elementRect;
 
     // create a div that blinks over the element
     const blinkOverlay = document.createElement('div');
@@ -601,6 +728,7 @@ export class Revelio {
     const step = this.getCurrentStep();
 
     const dialog = this.rootElement.querySelector('#revelio-dialog');
+
     if (dialog) {
       this.rootElement.removeChild(dialog);
     }
