@@ -138,6 +138,7 @@ const defaultOptions: RevelioOptions = {
 };
 
 export class Revelio {
+  private static started: boolean;
   /**
    * The options for the Revelio instance
    */
@@ -547,6 +548,11 @@ export class Revelio {
   }
 
   public start() {
+    if (Revelio.started) {
+      console.warn('Another Revelio tour is already started');
+      return;
+    }
+    Revelio.started = true;
     this.currentIndex = 0;
     this.setStepProps();
 
@@ -564,6 +570,8 @@ export class Revelio {
     this.unmountStep();
 
     this.currentIndex = 0;
+
+    Revelio.started = false;
 
     // call onEnd
     this.onEnd?.();
