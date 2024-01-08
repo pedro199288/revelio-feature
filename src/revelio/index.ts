@@ -28,6 +28,11 @@ type RevelioSharedConfig = {
   dialogMargin: number;
 
   /**
+   * Determines whether the step dialog should be scrolled into view.
+   */
+  preventScrollIntoView: boolean;
+
+  /**
    * The text to display on the previous button.
    */
   prevBtnText: string;
@@ -126,6 +131,7 @@ const defaultOptions: RevelioOptions = {
   dialogMaxWidth: 300,
   dialogMaxHeight: 300,
   dialogMargin: 16,
+  preventScrollIntoView: false,
   prevBtnText: 'Prev',
   nextBtnText: 'Next',
   skipBtnText: 'Skip',
@@ -165,6 +171,8 @@ export class Revelio {
     defaultOptions.dialogMaxHeight;
   private dialogMargin: RevelioOptions['dialogMargin'] =
     defaultOptions.dialogMargin;
+  private preventScrollIntoView: RevelioOptions['preventScrollIntoView'] =
+    defaultOptions.preventScrollIntoView;
   private prevBtnText: RevelioOptions['prevBtnText'] =
     defaultOptions.prevBtnText;
   private nextBtnText: RevelioOptions['nextBtnText'] =
@@ -249,6 +257,10 @@ export class Revelio {
       stepOptions?.dialogMargin ??
       this.baseConfig.dialogMargin ??
       this.dialogMargin;
+    this.preventScrollIntoView =
+      stepOptions?.preventScrollIntoView ??
+      this.baseConfig.preventScrollIntoView ??
+      this.preventScrollIntoView;
     this.prevBtnText =
       stepOptions?.prevBtnText ??
       this.baseConfig.prevBtnText ??
@@ -463,6 +475,14 @@ export class Revelio {
     this.rootElement.appendChild(dialog);
 
     this.setDialogPosition(dialog, elementPosition, elementDimensions);
+
+    if (!this.preventScrollIntoView) {
+      dialog.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'center',
+      });
+    }
   }
 
   private highlightStepElement(step: JourneyStep) {
