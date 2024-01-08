@@ -7,7 +7,8 @@
   "scripts": {
     "start": "bun src/index.ts",
     "dev": "bun --watch src/index.ts",
-    "build": "bun build src/revelio/index.ts --outdir=dist && bun run build:declaration",
+    "build:watch": "concurrently -n types,build -c \"bgMagenta,bgBlue\" \"bun run build:declaration --watch\" \"bun build src/index.ts --outdir=dist --watch\"",
+    "build": "bun build src/index.ts --outdir=dist && bun run build:declaration",
     "build:declaration": "tsc --emitDeclarationOnly --project tsconfig.types.json",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "format": "prettier --write 'src/**/*.{ts,tsx,json}'",
@@ -20,10 +21,14 @@
     "@types/bun": "^1.0.0",
     "@typescript-eslint/eslint-plugin": "^6.16.0",
     "@typescript-eslint/parser": "^6.16.0",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.2",
+    "postcss": "^8.4.33",
     "prettier": "^3.1.1",
+    "tailwindcss": "^3.4.1",
     "typescript": "5.3.3"
   },
   "files": [

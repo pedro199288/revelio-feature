@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + TS</title>
+  </head>
+
+  <body>
+    <div id="app">
+      <div class="flex flex-col h-screen bg-gray-100">
+        <header class="px-4 lg:px-6 h-14 flex items-center">
+          <a class="flex items-center justify-center" href="/">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="h-6 w-6"
+            >
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span class="sr-only">TodoApp</span>
+          </a>
+          <nav class="ml-auto flex items-center gap-4 sm:gap-6">
+            <button
+              class="inline-flex h-9 items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-slate-50 shadow transition-colors hover:bg-slate-900/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-950 disabled:pointer-events-none disabled:opacity-50 dark:focus-visible:ring-slate-300"
+              id="start-tour-todos"
+            >
+              Start tour
+            </button>
+            <a
+              class="text-sm font-medium hover:underline underline-offset-4"
+              href="/todos/index.html"
+            >
+              Todos
+            </a>
+            <a
+              class="text-sm font-medium hover:underline underline-offset-4"
+              href="/#features-section"
+            >
+              Features
+            </a>
+          </nav>
+        </header>
+        <main class="flex-1 overflow-y-auto p-6">
+          <div class="flex flex-col items-center justify-center space-y-4">
+            <div class="flex items-center gap-4" id="global-clock">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="h-8 w-8 text-gray-500"
+              >
+                <line x1="10" x2="14" y1="2" y2="2"></line>
+                <line x1="12" x2="15" y1="14" y2="11"></line>
+                <circle cx="12" cy="14" r="8"></circle>
+              </svg>
+              <span class="text-2xl font-medium text-gray-500">25:00:00</span>
+            </div>
+            <div class="flex items-center gap-4" id="global-clock-controls">
+              <button
+                class="inline-flex items-center justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 rounded-full p-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="h-6 w-6 text-gray-500"
+                >
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+              </button>
+              <button
+                class="inline-flex items-center justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 rounded-full p-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="h-6 w-6 text-gray-500"
+                >
+                  <rect width="4" height="16" x="6" y="4"></rect>
+                  <rect width="4" height="16" x="14" y="4"></rect>
+                </svg>
+              </button>
+              <button
+                class="inline-flex items-center justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 rounded-full p-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="h-6 w-6 text-gray-500"
+                >
+                  <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <ul class="space-y-4 mt-8" id="todo-list">
+            <li
+              class="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+            >
+              <div class="flex items-center gap-4 group">
+                <label
+                  for="todo-2-checkbox"
+                  id="todo-2-label"
+                  class="cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    role="checkbox"
+                    aria-checked="false"
+                    value="on"
+                    checked="true"
+                    class="hidden h-4 w-4 shrink-0 rounded-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                    id="todo-2-checkbox"
+                  />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="h-6 w-6 stroke-slate-500 stroke-2 fill-none"
+                  >
+                    <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                    <path
+                      class="invisible group-has-[:checked]:visible"
+                      d="M9 12l2 2 4-4"
+                    ></path>
+                  </svg>
+                </label>
+                <span class="text-lg font-medium text-gray-900">
+                  Develop new feature
+                </span>
+              </div>
+              <input
+                class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-32"
+                id="time-2"
+                placeholder="00:25:00"
+                type="text"
+              />
+            </li>
+          </ul>
+        </main>
+        <footer
+          class="flex items-center justify-between p-6 bg-white shadow-md"
+        >
+          <input
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex-1 mr-4"
+            id="new-todo"
+            placeholder="New task"
+            type="text"
+          />
+          <button
+            class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+            id="add-todo"
+          >
+            Add task
+          </button>
+        </footer>
+      </div>
+    </div>
+    <script type="module" src="/src/todos.ts"></script>
+  </body>
+</html>

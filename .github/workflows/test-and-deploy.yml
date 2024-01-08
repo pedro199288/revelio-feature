@@ -16,18 +16,19 @@ jobs:
           bun-version: latest
 
       - name: Install Dependencies
-        run: bun install
-      
+        run: |
+          bun install
+
       - name: Type checking
         run: bun run typecheck
-      
+
       - name: Lint
         run: bun run lint
 
       - name: Test
         run: bun run test
 
-  CD: 
+  CD:
     if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions: write-all
@@ -46,12 +47,12 @@ jobs:
       - name: Build project
         run: bun build src/index.ts --outdir=dist
 
-      - name: Set env
+      - name: Set env with tag name
         run: echo "GITHUB_TAG_NAME=$(echo ${{github.ref}} | sed -e 's/refs\/tags\///g')" >> $GITHUB_ENV
 
       - name: Test
         run: echo $GITHUB_TAG_NAME
-        
+
       - name: Create GitHub Release
         run: gh release create $GITHUB_TAG_NAME --generate-notes
         env:
@@ -61,6 +62,3 @@ jobs:
         uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{secrets.NPM_TOKEN}}
-
-
-    
