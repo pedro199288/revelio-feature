@@ -289,7 +289,7 @@ export class Revelio {
    */
   private renderOverlay() {
     const overlay = document.createElement('div');
-    overlay.style.position = 'absolute';
+    overlay.style.position = 'fixed';
     overlay.style.top = '0';
     overlay.style.left = '0';
     overlay.style.width = '100%';
@@ -484,7 +484,9 @@ export class Revelio {
     blinkOverlay.style.width = `${width}px`;
     blinkOverlay.style.height = `${height}px`;
     blinkOverlay.style.backgroundColor = 'white';
-    blinkOverlay.style.opacity = '0';
+    blinkOverlay.style.opacity = '0.0';
+    blinkOverlay.style.boxShadow =
+      '0 0 5px white, 0 0 25px white, 0 0 50px white, 0 0 100px';
     blinkOverlay.style.zIndex = '10000';
     blinkOverlay.style.pointerEvents = 'none';
     blinkOverlay.style.borderRadius =
@@ -548,15 +550,12 @@ export class Revelio {
     this.currentIndex = 0;
     this.setStepProps();
 
-    // render overlay on root element
     this.renderOverlay();
 
-    // highlight the element for the current step
     this.mountStep();
   }
 
   public end() {
-    // remove overlay
     const overlay = this.rootElement.querySelector('#revelio-overlay');
     if (overlay) {
       this.rootElement.removeChild(overlay);
