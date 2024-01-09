@@ -3,7 +3,7 @@ import { Revelio } from 'revelio-feature';
 const tour = new Revelio({
   options: {
     preventDefaultStyles: true,
-    dialogClass: 'bg-white p-4 m-24 rounded-lg shadow-lg text-center',
+    dialogClass: 'bg-white p-4 m-4 rounded-lg shadow-lg text-center',
     contentClass: 'text-center',
     titleClass: 'text-2xl font-bold text-red-400',
     stepsInfoClass: 'text-gray-300 my-4 text-center',
@@ -12,7 +12,7 @@ const tour = new Revelio({
   journey: [
     {
       title: 'Features Link',
-      content: 'Click here to know all the featues available',
+      content: 'Click here to know all the <strong>featues</strong> available',
       element: '#features-link',
       options: {
         placement: 'bottom',
@@ -56,6 +56,9 @@ const tour = new Revelio({
       title: 'The end',
       content: 'This is the end of the tour, enjoy working with this app',
       element: '#app',
+      options: {
+        placement: 'center',
+      },
     },
   ],
 });
