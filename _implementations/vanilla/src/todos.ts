@@ -1,6 +1,14 @@
 import { Revelio } from 'revelio-feature';
 
 const tour = new Revelio({
+  options: {
+    onEnd: () => {
+      if (tour.journey.length === 7) {
+        // an step has been added, remove the penultimate step
+        tour.removeStep(-2);
+      }
+    },
+  },
   journey: [
     {
       title: 'Global Clock',
@@ -23,24 +31,10 @@ const tour = new Revelio({
     {
       title: 'Todo List',
       content: 'This is the todo list, you can add, edit and delete todos',
-      element: '#todo-list',
+      element: '#todo-list-container',
       options: {
         placement: 'bottom',
       },
-    },
-    {
-      title: 'Todo item checkbox',
-      content:
-        'This is a todo item checkbox, you can complete or uncomplete a todo by clicking on it',
-      element: '#todo-1-label',
-      options: {
-        placement: 'left',
-      },
-    },
-    {
-      title: 'Todo item time',
-      content: 'This is the time you have estimated to complete the todo',
-      element: '#time-1',
     },
     {
       title: 'New Todo input',
@@ -55,12 +49,29 @@ const tour = new Revelio({
       options: {
         goNextOnClick: true,
         showNextBtn: false,
+        onNext: () => {
+          const itemsAmount =
+            document.querySelector<HTMLUListElement>('#todo-list')!.children
+              .length;
+          const newTodoNumber = itemsAmount + 1;
+          tour.addStep(
+            {
+              title: 'New todo',
+              content: `New step added showing the new created todo ${newTodoNumber}`,
+              element: `#todo-${newTodoNumber}-checkbox`,
+              options: {
+                onEnd: () => {
+                  tour.removeStep(-2);
+                },
+                onPrev: () => {
+                  tour.removeStep(-2);
+                },
+              },
+            },
+            -1,
+          );
+        },
       },
-    },
-    {
-      title: 'New todo',
-      content: 'This is the new todo you have just added',
-      element: '.todo:last-child',
     },
     {
       title: 'The end',
@@ -121,7 +132,7 @@ function createTodo(title: string, id: number): HTMLLIElement {
    </div>
    <input
      class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-32"
-     id="time-2"
+     id="time-${id}"
      placeholder="00:25:00"
      type="text"
    />
@@ -140,7 +151,7 @@ function addTodo() {
     todoList.appendChild(todoItem);
     todoInput.value = '';
     todoInput.focus();
-  }, 4900);
+  }, 1000);
 }
 
 document
