@@ -16,6 +16,7 @@ const tour = new Revelio({
       element: '#features-link',
       options: {
         placement: 'bottom',
+        persistBlink: true,
       },
     },
     {
@@ -23,6 +24,7 @@ const tour = new Revelio({
       content: 'Want to use now this app? Click here to go to the Todos page',
       element: '#get-started-button',
       options: {
+        disableBlink: true,
         placement: 'bottom',
       },
     },
