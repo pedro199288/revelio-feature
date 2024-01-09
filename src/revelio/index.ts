@@ -307,86 +307,49 @@ export class Revelio {
 
   private setStepProps() {
     const stepOptions = this.journey[this.currentIndex]?.options;
-    this.placement =
-      stepOptions?.placement ?? this.baseConfig.placement ?? this.placement;
+    this.placement = stepOptions?.placement ?? this.baseConfig.placement;
     this.preventScrollIntoView =
       stepOptions?.preventScrollIntoView ??
-      this.baseConfig.preventScrollIntoView ??
-      this.preventScrollIntoView;
+      this.baseConfig.preventScrollIntoView;
     this.disableBlink =
-      stepOptions?.disableBlink ??
-      this.baseConfig.disableBlink ??
-      this.disableBlink;
+      stepOptions?.disableBlink ?? this.baseConfig.disableBlink;
     this.persistBlink =
-      stepOptions?.persistBlink ??
-      this.baseConfig.persistBlink ??
-      this.persistBlink;
+      stepOptions?.persistBlink ?? this.baseConfig.persistBlink;
     this.disableClick =
-      stepOptions?.disableClick ??
-      this.baseConfig.disableClick ??
-      this.disableClick;
-    this.nextOnClick =
-      stepOptions?.nextOnClick ??
-      this.baseConfig.nextOnClick ??
-      this.nextOnClick;
+      stepOptions?.disableClick ?? this.baseConfig.disableClick;
+    this.nextOnClick = stepOptions?.nextOnClick ?? this.baseConfig.nextOnClick;
     this.showStepsInfo =
-      stepOptions?.showStepsInfo ??
-      this.baseConfig.showStepsInfo ??
-      this.showStepsInfo;
-    this.dialogClass =
-      stepOptions?.dialogClass ??
-      this.baseConfig.dialogClass ??
-      this.dialogClass;
-    this.titleClass =
-      stepOptions?.titleClass ?? this.baseConfig.titleClass ?? this.titleClass;
+      stepOptions?.showStepsInfo ?? this.baseConfig.showStepsInfo;
+    this.dialogClass = stepOptions?.dialogClass ?? this.baseConfig.dialogClass;
+    this.titleClass = stepOptions?.titleClass ?? this.baseConfig.titleClass;
     this.contentClass =
-      stepOptions?.contentClass ??
-      this.baseConfig.contentClass ??
-      this.contentClass;
+      stepOptions?.contentClass ?? this.baseConfig.contentClass;
     this.stepsInfoClass =
-      stepOptions?.stepsInfoClass ??
-      this.baseConfig.stepsInfoClass ??
-      this.stepsInfoClass;
-    this.btnClass =
-      stepOptions?.btnClass ?? this.baseConfig.btnClass ?? this.btnClass;
+      stepOptions?.stepsInfoClass ?? this.baseConfig.stepsInfoClass;
+    this.btnClass = stepOptions?.btnClass ?? this.baseConfig.btnClass;
     this.preventDefaultStyles =
-      stepOptions?.preventDefaultStyles ??
-      this.baseConfig.preventDefaultStyles ??
-      this.preventDefaultStyles;
-    this.prevBtnText =
-      stepOptions?.prevBtnText ??
-      this.baseConfig.prevBtnText ??
-      this.prevBtnText;
-    this.nextBtnText =
-      stepOptions?.nextBtnText ??
-      this.baseConfig.nextBtnText ??
-      this.nextBtnText;
-    this.skipBtnText =
-      stepOptions?.skipBtnText ??
-      this.baseConfig.skipBtnText ??
-      this.skipBtnText;
-    this.doneBtnText =
-      stepOptions?.doneBtnText ??
-      this.baseConfig.doneBtnText ??
-      this.doneBtnText;
+      stepOptions?.preventDefaultStyles ?? this.baseConfig.preventDefaultStyles;
+    this.prevBtnText = stepOptions?.prevBtnText ?? this.baseConfig.prevBtnText;
+    this.nextBtnText = stepOptions?.nextBtnText ?? this.baseConfig.nextBtnText;
+    this.skipBtnText = stepOptions?.skipBtnText ?? this.baseConfig.skipBtnText;
+    this.doneBtnText = stepOptions?.doneBtnText ?? this.baseConfig.doneBtnText;
     this.showPrevBtn = stepOptions?.showPrevBtn ?? this.currentIndex > 0;
     this.showNextBtn =
       stepOptions?.showNextBtn ?? this.currentIndex < this.journey.length - 1;
     this.showSkipBtn =
       stepOptions?.showSkipBtn ??
       (this.currentIndex < this.journey.length - 1 &&
-        (this.baseConfig.showSkipBtn ?? this.showSkipBtn));
+        this.baseConfig.showSkipBtn);
     this.showDoneBtn =
       stepOptions?.showDoneBtn ??
       (this.currentIndex === this.journey.length - 1 &&
-        (this.baseConfig.showDoneBtn ?? this.showDoneBtn));
-    this.onStart =
-      stepOptions?.onStart ?? this.baseConfig.onStart ?? this.onStart;
-    this.onEnd = stepOptions?.onEnd ?? this.baseConfig.onEnd ?? this.onEnd;
-    this.onNext = stepOptions?.onNext ?? this.baseConfig.onNext ?? this.onNext;
-    this.onPrev = stepOptions?.onPrev ?? this.baseConfig.onPrev ?? this.onPrev;
-    this.onSkip = stepOptions?.onSkip ?? this.baseConfig.onSkip ?? this.onSkip;
-    this.onDone = stepOptions?.onDone ?? this.baseConfig.onDone ?? this.onDone;
+        this.baseConfig.showDoneBtn);
+    this.onStart = stepOptions?.onStart ?? this.baseConfig.onStart;
+    this.onEnd = stepOptions?.onEnd ?? this.baseConfig.onEnd;
+    this.onNext = stepOptions?.onNext ?? this.baseConfig.onNext;
+    this.onPrev = stepOptions?.onPrev ?? this.baseConfig.onPrev;
+    this.onSkip = stepOptions?.onSkip ?? this.baseConfig.onSkip;
+    this.onDone = stepOptions?.onDone ?? this.baseConfig.onDone;
   }
 
   /**
