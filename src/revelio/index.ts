@@ -7,7 +7,7 @@ type RevelioSharedConfig = {
   /**
    * The placement of the feature tour step. Can be 'top', 'bottom', 'left', or 'right'.
    */
-  placement: 'top' | 'bottom' | 'left' | 'right';
+  placement: 'top' | 'bottom' | 'left' | 'right' | 'center';
 
   /**
    * Determines whether the step dialog should be scrolled into view.
@@ -362,6 +362,24 @@ export class Revelio {
     this.rootElement.appendChild(overlay);
   }
 
+  private getPlacementArray(
+    placement: RevelioOptions['placement'],
+  ): RevelioOptions['placement'][] {
+    switch (placement) {
+      case 'left':
+        return ['left', 'right', 'top', 'bottom', 'center'];
+      case 'right':
+        return ['right', 'left', 'bottom', 'top', 'center'];
+      case 'top':
+        return ['top', 'bottom', 'left', 'right', 'center'];
+      case 'bottom':
+      default:
+        return ['bottom', 'top', 'right', 'left', 'center'];
+      case 'center':
+        return ['center'];
+    }
+  }
+
   private setDialogPosition(
     dialog: HTMLElement,
     elementPosition: { top: number; left: number },
@@ -370,8 +388,8 @@ export class Revelio {
     const dialogBoundingRect = dialog.getBoundingClientRect();
     const dialogComputedStyle = window.getComputedStyle(dialog);
     const dialogMargin = getNumberFromString(dialogComputedStyle.margin);
-    const dialogBorderBoxWidth = dialogBoundingRect.width + dialogMargin * 2;
-    const dialogBorderBoxHeight = dialogBoundingRect.height + dialogMargin * 2;
+    const dialogSpaceWidth = dialogBoundingRect.width + dialogMargin * 2;
+    const dialogSpaceHeight = dialogBoundingRect.height + dialogMargin * 2;
     const elementXCenter = elementPosition.left + elementDimensions.width / 2;
     const elementYCenter = elementPosition.top + elementDimensions.height / 2;
 
@@ -380,60 +398,88 @@ export class Revelio {
     const rootElementWidth = rootElementRect.width;
     const rootElementHeight = rootElementRect.height;
 
-    let dialogLeft: number = 0,
-      dialogTop: number = 0;
+    function getDialogPosition(placementArray: RevelioOptions['placement'][]) {
+      let dialogLeft: number = 0,
+        dialogTop: number = 0;
 
-    switch (this.placement) {
-      case 'right':
-      default:
-        console.log('getting for right');
-        dialogLeft = Math.min(
-          elementPosition.left + elementDimensions.width,
-          rootElementWidth - dialogBorderBoxWidth,
-        );
-        dialogTop = Math.min(
-          elementYCenter - dialogBorderBoxHeight / 2,
-          rootElementHeight - dialogBorderBoxHeight,
-        );
-        break;
-      case 'left':
-        console.log('getting for left');
-        dialogLeft = Math.max(elementPosition.left - dialogBorderBoxWidth, 0);
-        dialogTop = Math.min(
-          elementYCenter - dialogBorderBoxHeight / 2,
-          rootElementHeight - dialogBorderBoxHeight,
-        );
-        break;
-      case 'top':
-        console.log('getting for top');
-        dialogLeft = Math.min(
-          elementXCenter - dialogBorderBoxWidth / 2,
-          rootElementWidth - dialogBorderBoxWidth,
-        );
-        dialogTop = Math.max(elementPosition.top - dialogBorderBoxHeight, 0);
-        break;
-      case 'bottom':
-        console.log('getting for bottom');
-        dialogLeft = Math.min(
-          elementXCenter - dialogBorderBoxWidth / 2,
-          rootElementWidth - dialogBorderBoxWidth,
-        );
-        dialogTop = Math.min(
-          elementPosition.top + elementDimensions.height,
-          rootElementHeight - dialogBorderBoxHeight,
-        );
-        break;
+      const currentPlacement = placementArray.shift();
+      switch (currentPlacement) {
+        case 'left':
+          dialogLeft = elementPosition.left - dialogSpaceWidth;
+          dialogTop = elementYCenter - dialogSpaceHeight / 2;
+
+          // get potential overlap
+          if (dialogLeft < rootElementRect.left) {
+            // will overlap with element as there is no space to the left
+            if (placementArray.length > 0) {
+              return getDialogPosition(placementArray);
+            }
+          }
+
+          break;
+        case 'right':
+          dialogLeft = elementPosition.left + elementDimensions.width;
+          dialogTop = elementYCenter - dialogSpaceHeight / 2;
+
+          // get potential overlap
+          if (dialogLeft + dialogSpaceWidth > rootElementRect.right) {
+            // will overlap with element as there is no space to the right
+            if (placementArray.length > 0) {
+              return getDialogPosition(placementArray);
+            }
+          }
+
+          break;
+        case 'top':
+          dialogLeft = elementXCenter - dialogSpaceWidth / 2;
+          dialogTop = elementPosition.top - dialogSpaceHeight;
+
+          // get potential overlap
+          if (dialogTop < rootElementRect.top) {
+            // will overlap with element as there is no space above
+            if (placementArray.length > 0) {
+              return getDialogPosition(placementArray);
+            }
+          }
+
+          break;
+        case 'bottom':
+        default:
+          dialogLeft = elementXCenter - dialogSpaceWidth / 2;
+          dialogTop = elementPosition.top + elementDimensions.height;
+
+          // get potential overlap
+          if (dialogTop + dialogSpaceHeight > rootElementRect.bottom) {
+            // will overlap with element as there is no space below
+            if (placementArray.length > 0) {
+              return getDialogPosition(placementArray);
+            }
+          }
+
+          break;
+        case 'center':
+          dialogLeft = rootElementWidth / 2 - dialogSpaceWidth / 2;
+          dialogTop = rootElementHeight / 2 - dialogSpaceHeight / 2;
+
+          break;
+      }
+
+      return {
+        dialogLeft,
+        dialogTop,
+      };
     }
 
-    if (dialogLeft < 0) {
-      dialogLeft = 0;
-    }
-    if (dialogTop < 0) {
-      dialogTop = 0;
-    }
+    const placementArray = this.getPlacementArray(this.placement);
 
-    dialog.style.top = `${dialogTop}px`;
-    dialog.style.left = `${dialogLeft}px`;
+    const { dialogLeft, dialogTop } = getDialogPosition(placementArray);
+
+    dialog.style.top = `clamp(0px, ${dialogTop}px, ${
+      rootElementHeight - dialogSpaceHeight
+    }px)`;
+    dialog.style.left = `clamp(0px, ${dialogLeft}px, ${
+      rootElementWidth - dialogSpaceWidth
+    }px)`;
 
     // Set CSS to make it visible
     dialog.style.visibility = '';

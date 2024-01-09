@@ -56,6 +56,9 @@ const tour = new Revelio({
       title: 'The end',
       content: 'This is the end of the tour, enjoy working with this app',
       element: '#app',
+      options: {
+        placement: 'center',
+      },
     },
   ],
 });

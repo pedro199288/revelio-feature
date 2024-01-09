@@ -33,6 +33,9 @@ const tour = new Revelio({
       content:
         'This is a todo item checkbox, you can complete or uncomplete a todo by clicking on it',
       element: '#todo-2-label',
+      options: {
+        placement: 'left',
+      },
     },
     {
       title: 'Todo item time',
