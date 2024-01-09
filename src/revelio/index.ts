@@ -825,6 +825,8 @@ export class Revelio {
     this.renderOverlay();
 
     await this.mountStep();
+    
+    this.onStart?.();
   }
 
   public async end() {
