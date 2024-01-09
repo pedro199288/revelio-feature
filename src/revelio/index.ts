@@ -156,7 +156,7 @@ type RevelioOptions = RevelioSharedConfig & {
  * Journey passed to the Revelio constructor
  */
 type JourneyStep = {
-  element: string | HTMLElement;
+  element?: string | HTMLElement;
   title: string;
   content: string;
   /**
@@ -430,16 +430,14 @@ export class Revelio {
 
   private setDialogPosition(
     dialog: HTMLElement,
-    elementPosition: { top: number; left: number },
-    elementDimensions: { width: number; height: number },
+    elementPosition?: { top: number; left: number },
+    elementDimensions?: { width: number; height: number },
   ) {
     const dialogBoundingRect = dialog.getBoundingClientRect();
     const dialogComputedStyle = window.getComputedStyle(dialog);
     const dialogMargin = getNumberFromString(dialogComputedStyle.margin);
     const dialogSpaceWidth = dialogBoundingRect.width + dialogMargin * 2;
     const dialogSpaceHeight = dialogBoundingRect.height + dialogMargin * 2;
-    const elementXCenter = elementPosition.left + elementDimensions.width / 2;
-    const elementYCenter = elementPosition.top + elementDimensions.height / 2;
 
     // get dialog top and left position, take into account the dialog does not overflow the root element
     const rootElementRect = this.rootElement.getBoundingClientRect();
@@ -451,65 +449,79 @@ export class Revelio {
         dialogTop: number = 0;
 
       const currentPlacement = placementArray.shift();
-      switch (currentPlacement) {
-        case 'left':
-          dialogLeft = elementPosition.left - dialogSpaceWidth;
-          dialogTop = elementYCenter - dialogSpaceHeight / 2;
 
-          // get potential overlap
-          if (dialogLeft < rootElementRect.left) {
-            // will overlap with element as there is no space to the left
-            if (placementArray.length > 0) {
-              return getDialogPosition(placementArray);
+      if (!currentPlacement) {
+        throw new Error('No placement specified');
+      }
+
+      if (currentPlacement === 'center') {
+        dialogLeft = rootElementWidth / 2 - dialogSpaceWidth / 2;
+        dialogTop = rootElementHeight / 2 - dialogSpaceHeight / 2;
+      } else {
+        if (!elementPosition || !elementDimensions) {
+          throw new Error('No element position or dimensions specified');
+        }
+
+        const elementXCenter =
+          elementPosition.left + elementDimensions.width / 2;
+        const elementYCenter =
+          elementPosition.top + elementDimensions.height / 2;
+
+        switch (currentPlacement) {
+          case 'left':
+            dialogLeft = elementPosition.left - dialogSpaceWidth;
+            dialogTop = elementYCenter - dialogSpaceHeight / 2;
+
+            // get potential overlap
+            if (dialogLeft < rootElementRect.left) {
+              // will overlap with element as there is no space to the left
+              if (placementArray.length > 0) {
+                return getDialogPosition(placementArray);
+              }
             }
-          }
 
-          break;
-        case 'right':
-          dialogLeft = elementPosition.left + elementDimensions.width;
-          dialogTop = elementYCenter - dialogSpaceHeight / 2;
+            break;
+          case 'right':
+            dialogLeft = elementPosition.left + elementDimensions.width;
+            dialogTop = elementYCenter - dialogSpaceHeight / 2;
 
-          // get potential overlap
-          if (dialogLeft + dialogSpaceWidth > rootElementRect.right) {
-            // will overlap with element as there is no space to the right
-            if (placementArray.length > 0) {
-              return getDialogPosition(placementArray);
+            // get potential overlap
+            if (dialogLeft + dialogSpaceWidth > rootElementRect.right) {
+              // will overlap with element as there is no space to the right
+              if (placementArray.length > 0) {
+                return getDialogPosition(placementArray);
+              }
             }
-          }
 
-          break;
-        case 'top':
-          dialogLeft = elementXCenter - dialogSpaceWidth / 2;
-          dialogTop = elementPosition.top - dialogSpaceHeight;
+            break;
+          case 'top':
+            dialogLeft = elementXCenter - dialogSpaceWidth / 2;
+            dialogTop = elementPosition.top - dialogSpaceHeight;
 
-          // get potential overlap
-          if (dialogTop < rootElementRect.top) {
-            // will overlap with element as there is no space above
-            if (placementArray.length > 0) {
-              return getDialogPosition(placementArray);
+            // get potential overlap
+            if (dialogTop < rootElementRect.top) {
+              // will overlap with element as there is no space above
+              if (placementArray.length > 0) {
+                return getDialogPosition(placementArray);
+              }
             }
-          }
 
-          break;
-        case 'bottom':
-        default:
-          dialogLeft = elementXCenter - dialogSpaceWidth / 2;
-          dialogTop = elementPosition.top + elementDimensions.height;
+            break;
+          case 'bottom':
+          default:
+            dialogLeft = elementXCenter - dialogSpaceWidth / 2;
+            dialogTop = elementPosition.top + elementDimensions.height;
 
-          // get potential overlap
-          if (dialogTop + dialogSpaceHeight > rootElementRect.bottom) {
-            // will overlap with element as there is no space below
-            if (placementArray.length > 0) {
-              return getDialogPosition(placementArray);
+            // get potential overlap
+            if (dialogTop + dialogSpaceHeight > rootElementRect.bottom) {
+              // will overlap with element as there is no space below
+              if (placementArray.length > 0) {
+                return getDialogPosition(placementArray);
+              }
             }
-          }
 
-          break;
-        case 'center':
-          dialogLeft = rootElementWidth / 2 - dialogSpaceWidth / 2;
-          dialogTop = rootElementHeight / 2 - dialogSpaceHeight / 2;
-
-          break;
+            break;
+        }
       }
 
       return {
@@ -673,8 +685,8 @@ export class Revelio {
 
   private renderStepDialog(
     step: JourneyStep,
-    elementPosition: { top: number; left: number },
-    elementDimensions: { width: number; height: number },
+    elementPosition?: { top: number; left: number },
+    elementDimensions?: { width: number; height: number },
   ) {
     const dialog = this.createDialog();
     const title = this.createTitle(step);
@@ -750,8 +762,8 @@ export class Revelio {
     );
   }
 
-  private highlightStepElement(step: JourneyStep) {
-    const element = this.getStepElement(step.element);
+  private highlightStepElement(stepElement: HTMLElement | string) {
+    const element = this.getStepElement(stepElement);
     element.style.zIndex = '10000';
     element.style.position = 'relative';
     if (this.disableClick) {
@@ -802,7 +814,11 @@ export class Revelio {
    */
   private mountStep() {
     const step = this.getCurrentStep();
-    const { position, dimensions } = this.highlightStepElement(step);
+    if (step.element === undefined) {
+      this.placement = 'center';
+      return this.renderStepDialog(step);
+    }
+    const { position, dimensions } = this.highlightStepElement(step.element);
     this.renderStepDialog(step, position, dimensions);
   }
 
@@ -845,20 +861,22 @@ export class Revelio {
       this.rootElement.removeChild(dialog);
     }
 
-    const element = this.getStepElement(step.element);
+    if (step.element !== undefined) {
+      const element = this.getStepElement(step.element);
 
-    element.style.zIndex = '';
-    element.style.position = '';
+      element.style.zIndex = '';
+      element.style.position = '';
 
-    if (!element.getAttribute('style')?.trim()) {
-      element.removeAttribute('style');
-    }
+      if (!element.getAttribute('style')?.trim()) {
+        element.removeAttribute('style');
+      }
 
-    const blinkOverlay = this.rootElement.querySelector(
-      '#revelio-blink-overlay',
-    );
-    if (blinkOverlay) {
-      this.rootElement.removeChild(blinkOverlay);
+      const blinkOverlay = this.rootElement.querySelector(
+        '#revelio-blink-overlay',
+      );
+      if (blinkOverlay) {
+        this.rootElement.removeChild(blinkOverlay);
+      }
     }
   }
 
