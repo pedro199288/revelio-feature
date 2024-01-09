@@ -209,7 +209,7 @@ export class Revelio {
   /**
    * The feature tour for the Revelio instance
    */
-  private journey: JourneyStep[];
+  private _journey: JourneyStep[];
   /**
    * The current step index for the Revelio instance
    */
@@ -287,7 +287,7 @@ export class Revelio {
     };
 
     // init props
-    this.journey = journey ?? [];
+    this._journey = journey ?? [];
     this.currentIndex = 0;
     this.setStepProps();
 
@@ -302,6 +302,10 @@ export class Revelio {
       throw new Error(`Element ${element} is not an HTMLElement`);
 
     this.rootElement = element ?? document.body;
+  }
+
+  get journey() {
+    return this._journey;
   }
 
   private async getStepElement(
@@ -329,7 +333,7 @@ export class Revelio {
   }
 
   private setStepProps() {
-    const stepOptions = this.journey[this.currentIndex]?.options;
+    const stepOptions = this._journey[this.currentIndex]?.options;
     this.placement = stepOptions?.placement ?? this.baseConfig.placement;
     this.preventScrollIntoView =
       stepOptions?.preventScrollIntoView ??
@@ -361,14 +365,14 @@ export class Revelio {
     this.doneBtnText = stepOptions?.doneBtnText ?? this.baseConfig.doneBtnText;
     this.showPrevBtn = stepOptions?.showPrevBtn ?? this.currentIndex > 0;
     this.showNextBtn =
-      stepOptions?.showNextBtn ?? this.currentIndex < this.journey.length - 1;
+      stepOptions?.showNextBtn ?? this.currentIndex < this._journey.length - 1;
     this.showSkipBtn =
       stepOptions?.showSkipBtn ??
-      (this.currentIndex < this.journey.length - 1 &&
+      (this.currentIndex < this._journey.length - 1 &&
         this.baseConfig.showSkipBtn);
     this.showDoneBtn =
       stepOptions?.showDoneBtn ??
-      (this.currentIndex === this.journey.length - 1 &&
+      (this.currentIndex === this._journey.length - 1 &&
         this.baseConfig.showDoneBtn);
     this.onStart = stepOptions?.onStart ?? this.baseConfig.onStart;
     this.onEnd = stepOptions?.onEnd ?? this.baseConfig.onEnd;
@@ -596,7 +600,7 @@ export class Revelio {
       stepsInfo.style.fontSize = '0.75rem';
       stepsInfo.style.color = 'rgba(0, 0, 0, 0.5)';
     }
-    stepsInfo.textContent = `${this.currentIndex + 1}/${this.journey.length}`;
+    stepsInfo.textContent = `${this.currentIndex + 1}/${this._journey.length}`;
     if (this.stepsInfoClass) {
       stepsInfo.classList.add(...arrayFromString(this.stepsInfoClass));
     }
@@ -652,8 +656,8 @@ export class Revelio {
 
     if (this.showDoneBtn) {
       const doneBtn = this.createButton(this.doneBtnText, () => {
-        this.onDone?.();
         this.end();
+        this.onDone?.();
       });
       nextBtnContainer.appendChild(doneBtn);
     }
@@ -759,9 +763,7 @@ export class Revelio {
       element.style.pointerEvents = 'none';
     }
     if (this.goNextOnClick) {
-      element.addEventListener('click', () => {
-        this.nextStep();
-      });
+      element.addEventListener('click', this.boundNextStep);
     }
 
     // get the position and dimensions
@@ -791,7 +793,7 @@ export class Revelio {
    * Returns the current step
    */
   private getCurrentStep() {
-    const step = this.journey[this.currentIndex];
+    const step = this._journey[this.currentIndex];
     if (!step) {
       throw new Error(`Step ${this.currentIndex} not found`);
     }
@@ -825,7 +827,7 @@ export class Revelio {
     this.renderOverlay();
 
     await this.mountStep();
-    
+
     this.onStart?.();
   }
 
@@ -835,7 +837,11 @@ export class Revelio {
       this.rootElement.removeChild(overlay);
     }
 
-    await this.unmountStep();
+    try {
+      await this.unmountStep();
+    } catch (e) {
+      console.error(e); // log the error but continue to end the instance
+    }
 
     this.currentIndex = 0;
 
@@ -864,6 +870,10 @@ export class Revelio {
         element.removeAttribute('style');
       }
 
+      if (this.goNextOnClick) {
+        element.removeEventListener('click', this.boundNextStep);
+      }
+
       const blinkOverlay = this.rootElement.querySelector(
         '#revelio-blink-overlay',
       );
@@ -873,22 +883,52 @@ export class Revelio {
     }
   }
 
-  public nextStep() {
+  /**
+   *
+   * @param step The step to add
+   * @param position The position to insert the step at (can be a negative number as
+   * this works with splice). If not specified, the step will be added at the end of
+   * the journey.
+   */
+  public addStep(step: JourneyStep, position?: number) {
+    if (position === undefined) {
+      this._journey.push(step);
+    } else {
+      this._journey.splice(position, 0, step);
+    }
+  }
+
+  /**
+   *
+   * @param position The position of the step to remove (can be negative as this works with splice).
+   * If not specified, the last step will be removed.
+   */
+  public removeStep(position?: number) {
+    if (position === undefined) {
+      this._journey.pop();
+    } else {
+      this._journey.splice(position, 1);
+    }
+  }
+
+  public async nextStep() {
     this.onNext?.();
 
-    if (this.currentIndex >= this.journey.length - 1) {
+    if (this.currentIndex >= this._journey.length - 1) {
       console.warn('no next step');
       return;
     }
 
-    this.unmountStep();
+    await this.unmountStep();
 
     this.currentIndex += 1;
     this.setStepProps();
     this.mountStep();
   }
 
-  public prevStep() {
+  private boundNextStep = this.nextStep.bind(this);
+
+  public async prevStep() {
     this.onPrev?.();
 
     if (this.currentIndex <= 0) {
@@ -896,7 +936,7 @@ export class Revelio {
       return;
     }
 
-    this.unmountStep();
+    await this.unmountStep();
 
     this.currentIndex -= 1;
     this.setStepProps();
