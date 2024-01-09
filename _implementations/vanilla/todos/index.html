@@ -69,7 +69,7 @@
                 <line x1="12" x2="15" y1="14" y2="11"></line>
                 <circle cx="12" cy="14" r="8"></circle>
               </svg>
-              <span class="text-2xl font-medium text-gray-500">25:00:00</span>
+              <span class="text-2xl font-medium text-gray-500">00:25:00</span>
             </div>
             <div class="flex items-center gap-4" id="global-clock-controls">
               <button
@@ -129,69 +129,24 @@
               </button>
             </div>
           </div>
-          <ul class="space-y-4 mt-8" id="todo-list">
-            <li
-              class="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
-            >
-              <div class="flex items-center gap-4 group">
-                <label
-                  for="todo-2-checkbox"
-                  id="todo-2-label"
-                  class="cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    role="checkbox"
-                    aria-checked="false"
-                    value="on"
-                    checked="true"
-                    class="hidden h-4 w-4 shrink-0 rounded-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                    id="todo-2-checkbox"
-                  />
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    class="h-6 w-6 stroke-slate-500 stroke-2 fill-none"
-                  >
-                    <rect width="18" height="18" x="3" y="3" rx="2"></rect>
-                    <path
-                      class="invisible group-has-[:checked]:visible"
-                      d="M9 12l2 2 4-4"
-                    ></path>
-                  </svg>
-                </label>
-                <span class="text-lg font-medium text-gray-900">
-                  Develop new feature
-                </span>
-              </div>
-              <input
-                class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 w-32"
-                id="time-2"
-                placeholder="00:25:00"
-                type="text"
-              />
-            </li>
-          </ul>
+          <ul class="space-y-4 mt-8" id="todo-list"></ul>
         </main>
-        <footer
-          class="flex items-center justify-between p-6 bg-white shadow-md"
-        >
-          <input
-            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex-1 mr-4"
-            id="new-todo"
-            placeholder="New task"
-            type="text"
-          />
-          <button
-            class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-            id="add-todo"
-          >
-            Add task
-          </button>
+        <footer class="p-6 bg-white shadow-md">
+          <form class="flex items-center gap-4" id="add-todo-form">
+            <input
+              class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex-1 mr-4"
+              id="new-todo-input"
+              placeholder="New task"
+              type="text"
+            />
+            <button
+              type="submit"
+              class="inline-flex bg-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+              id="add-todo-btn"
+            >
+              Add task
+            </button>
+          </form>
         </footer>
       </div>
     </div>

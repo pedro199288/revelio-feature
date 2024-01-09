@@ -35,7 +35,7 @@ const tour = new Revelio({
       element: '#learn-more-button',
       options: {
         placement: 'bottom',
-        nextOnClick: true,
+        goNextOnClick: true,
       },
     },
     {

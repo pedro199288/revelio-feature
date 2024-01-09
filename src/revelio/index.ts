@@ -32,7 +32,12 @@ type RevelioSharedConfig = {
   /**
    * Goes to the next step when the user clicks on the highlighted element
    */
-  nextOnClick: boolean;
+  goNextOnClick: boolean;
+
+  /**
+   * Time to await for the element to be available
+   */
+  awaitElementTimeout: number;
 
   /**
    * Determines whether to show the step number and total steps.
@@ -171,7 +176,8 @@ const defaultOptions: RevelioOptions = {
   disableBlink: false,
   persistBlink: false,
   disableClick: false,
-  nextOnClick: false,
+  goNextOnClick: false,
+  awaitElementTimeout: 5000,
   showStepsInfo: true,
   dialogClass: '',
   titleClass: '',
@@ -218,8 +224,10 @@ export class Revelio {
     defaultOptions.persistBlink;
   private disableClick: RevelioOptions['disableClick'] =
     defaultOptions.disableClick;
-  private nextOnClick: RevelioOptions['nextOnClick'] =
-    defaultOptions.nextOnClick;
+  private goNextOnClick: RevelioOptions['goNextOnClick'] =
+    defaultOptions.goNextOnClick;
+  private awaitElementTimeout: RevelioOptions['awaitElementTimeout'] =
+    defaultOptions.awaitElementTimeout;
   private showStepsInfo: RevelioOptions['showStepsInfo'] =
     defaultOptions.showStepsInfo;
   private dialogClass: RevelioOptions['dialogClass'] =
@@ -296,9 +304,24 @@ export class Revelio {
     this.rootElement = element ?? document.body;
   }
 
-  private getStepElement(element: string | HTMLElement): HTMLElement {
-    const e =
-      typeof element === 'string' ? document.querySelector(element) : element;
+  private async getStepElement(
+    element: string | HTMLElement,
+  ): Promise<HTMLElement> {
+    let e: HTMLElement | null = null;
+    if (typeof element === 'string') {
+      // do some attempts and awaits to get the element, max 5 attempts
+      let attempts = 0;
+      const attemptsInterval = 100;
+      const maxAttempts = this.awaitElementTimeout / attemptsInterval;
+      while (attempts < maxAttempts) {
+        e = document.querySelector(element);
+        if (e) break;
+        await new Promise((resolve) => setTimeout(resolve, attemptsInterval));
+        attempts += 1;
+      }
+    } else {
+      e = element;
+    }
     if (!e) throw new Error(`Element ${element} not found`);
     if (!(e instanceof HTMLElement))
       throw new Error(`Element ${element} is not an HTMLElement`);
@@ -325,10 +348,14 @@ export class Revelio {
       stepOptions?.disableClick ??
       this.baseConfig.disableClick ??
       this.disableClick;
-    this.nextOnClick =
-      stepOptions?.nextOnClick ??
-      this.baseConfig.nextOnClick ??
-      this.nextOnClick;
+    this.goNextOnClick =
+      stepOptions?.goNextOnClick ??
+      this.baseConfig.goNextOnClick ??
+      this.goNextOnClick;
+    this.awaitElementTimeout =
+      stepOptions?.awaitElementTimeout ??
+      this.baseConfig.awaitElementTimeout ??
+      this.awaitElementTimeout;
     this.showStepsInfo =
       stepOptions?.showStepsInfo ??
       this.baseConfig.showStepsInfo ??
@@ -762,14 +789,14 @@ export class Revelio {
     );
   }
 
-  private highlightStepElement(stepElement: HTMLElement | string) {
-    const element = this.getStepElement(stepElement);
+  private async highlightStepElement(stepElement: HTMLElement | string) {
+    const element = await this.getStepElement(stepElement);
     element.style.zIndex = '10000';
     element.style.position = 'relative';
     if (this.disableClick) {
       element.style.pointerEvents = 'none';
     }
-    if (this.nextOnClick) {
+    if (this.goNextOnClick) {
       element.addEventListener('click', () => {
         this.nextStep();
       });
@@ -812,17 +839,19 @@ export class Revelio {
   /**
    * Overlay that covers the element for the current step
    */
-  private mountStep() {
+  private async mountStep() {
     const step = this.getCurrentStep();
     if (step.element === undefined) {
       this.placement = 'center';
       return this.renderStepDialog(step);
     }
-    const { position, dimensions } = this.highlightStepElement(step.element);
+    const { position, dimensions } = await this.highlightStepElement(
+      step.element,
+    );
     this.renderStepDialog(step, position, dimensions);
   }
 
-  public start() {
+  public async start() {
     if (Revelio.started) {
       console.warn('Another Revelio tour is already started');
       return;
@@ -833,16 +862,16 @@ export class Revelio {
 
     this.renderOverlay();
 
-    this.mountStep();
+    await this.mountStep();
   }
 
-  public end() {
+  public async end() {
     const overlay = this.rootElement.querySelector('#revelio-overlay');
     if (overlay) {
       this.rootElement.removeChild(overlay);
     }
 
-    this.unmountStep();
+    await this.unmountStep();
 
     this.currentIndex = 0;
 
@@ -852,7 +881,7 @@ export class Revelio {
     this.onEnd?.();
   }
 
-  public unmountStep() {
+  public async unmountStep() {
     const step = this.getCurrentStep();
 
     const dialog = this.rootElement.querySelector('#revelio-dialog');
@@ -862,7 +891,7 @@ export class Revelio {
     }
 
     if (step.element !== undefined) {
-      const element = this.getStepElement(step.element);
+      const element = await this.getStepElement(step.element);
 
       element.style.zIndex = '';
       element.style.position = '';
@@ -881,12 +910,12 @@ export class Revelio {
   }
 
   public nextStep() {
+    this.onNext?.();
+
     if (this.currentIndex >= this.journey.length - 1) {
       console.warn('no next step');
       return;
     }
-
-    this.onNext?.();
 
     this.unmountStep();
 
@@ -896,11 +925,12 @@ export class Revelio {
   }
 
   public prevStep() {
+    this.onPrev?.();
+
     if (this.currentIndex <= 0) {
       console.warn('no prev step');
       return;
     }
-    this.onPrev?.();
 
     this.unmountStep();
 
