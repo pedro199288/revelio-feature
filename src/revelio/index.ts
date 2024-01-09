@@ -15,6 +15,16 @@ type RevelioSharedConfig = {
   preventScrollIntoView: boolean;
 
   /**
+   * If true, disables blinking the element for the current step.
+   */
+  disableBlink: boolean;
+
+  /**
+   * If true, persist the blink effect on the element for the current step.
+   */
+  persistBlink: boolean;
+
+  /**
    * Determines whether to show the step number and total steps.
    */
   showStepsInfo: boolean;
@@ -148,6 +158,8 @@ type JourneyStep = {
 const defaultOptions: RevelioOptions = {
   placement: 'bottom',
   preventScrollIntoView: false,
+  disableBlink: false,
+  persistBlink: false,
   showStepsInfo: true,
   dialogClass: '',
   titleClass: '',
@@ -188,6 +200,10 @@ export class Revelio {
   private placement: RevelioOptions['placement'] = defaultOptions.placement;
   private preventScrollIntoView: RevelioOptions['preventScrollIntoView'] =
     defaultOptions.preventScrollIntoView;
+  private disableBlink: RevelioOptions['disableBlink'] =
+    defaultOptions.disableBlink;
+  private persistBlink: RevelioOptions['persistBlink'] =
+    defaultOptions.persistBlink;
   private showStepsInfo: RevelioOptions['showStepsInfo'] =
     defaultOptions.showStepsInfo;
   private dialogClass: RevelioOptions['dialogClass'] =
@@ -281,6 +297,14 @@ export class Revelio {
       stepOptions?.preventScrollIntoView ??
       this.baseConfig.preventScrollIntoView ??
       this.preventScrollIntoView;
+    this.disableBlink =
+      stepOptions?.disableBlink ??
+      this.baseConfig.disableBlink ??
+      this.disableBlink;
+    this.persistBlink =
+      stepOptions?.persistBlink ??
+      this.baseConfig.persistBlink ??
+      this.persistBlink;
     this.showStepsInfo =
       stepOptions?.showStepsInfo ??
       this.baseConfig.showStepsInfo ??
@@ -658,18 +682,13 @@ export class Revelio {
     }
   }
 
-  private highlightStepElement(step: JourneyStep) {
-    const element = this.getStepElement(step.element);
-    element.style.zIndex = '10000';
-    element.style.position = 'relative';
-
-    // get the position and dimensions
-    const elementRect = element.getBoundingClientRect();
-    const rootRect = this.rootElement.getBoundingClientRect();
-    const top = elementRect.top - rootRect.top;
-    const left = elementRect.left - rootRect.left;
-    const { width, height } = elementRect;
-
+  private createBlinkOverlay(
+    element: HTMLElement,
+    top: number,
+    left: number,
+    width: number,
+    height: number,
+  ) {
     // create a div that blinks over the element
     const blinkOverlay = document.createElement('div');
     blinkOverlay.style.position = 'absolute';
@@ -703,10 +722,27 @@ export class Revelio {
       ],
       {
         duration: 1000,
-        iterations: 1,
+        iterations: this.persistBlink ? Infinity : 1,
         easing: 'ease-in',
       },
     );
+  }
+
+  private highlightStepElement(step: JourneyStep) {
+    const element = this.getStepElement(step.element);
+    element.style.zIndex = '10000';
+    element.style.position = 'relative';
+
+    // get the position and dimensions
+    const elementRect = element.getBoundingClientRect();
+    const rootRect = this.rootElement.getBoundingClientRect();
+    const top = elementRect.top - rootRect.top;
+    const left = elementRect.left - rootRect.left;
+    const { width, height } = elementRect;
+
+    if (!this.disableBlink) {
+      this.createBlinkOverlay(element, top, left, width, height);
+    }
 
     return {
       position: {
