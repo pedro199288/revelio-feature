@@ -5,7 +5,7 @@ import { arrayFromString, getNumberFromString } from '../utils';
  */
 type RevelioSharedConfig = {
   /**
-   * The placement of the feature tour step. Can be 'top', 'bottom', 'left', or 'right'.
+   * The placement of the feature tour step. Can be 'top', 'bottom', 'left', 'right' or 'center'.
    */
   placement: 'top' | 'bottom' | 'left' | 'right' | 'center';
 
@@ -23,6 +23,16 @@ type RevelioSharedConfig = {
    * If true, persist the blink effect on the element for the current step.
    */
   persistBlink: boolean;
+
+  /**
+   * Disables click on highlighted element
+   */
+  disableClick: boolean;
+
+  /**
+   * Goes to the next step when the user clicks on the highlighted element
+   */
+  nextOnClick: boolean;
 
   /**
    * Determines whether to show the step number and total steps.
@@ -160,6 +170,8 @@ const defaultOptions: RevelioOptions = {
   preventScrollIntoView: false,
   disableBlink: false,
   persistBlink: false,
+  disableClick: false,
+  nextOnClick: false,
   showStepsInfo: true,
   dialogClass: '',
   titleClass: '',
@@ -204,6 +216,10 @@ export class Revelio {
     defaultOptions.disableBlink;
   private persistBlink: RevelioOptions['persistBlink'] =
     defaultOptions.persistBlink;
+  private disableClick: RevelioOptions['disableClick'] =
+    defaultOptions.disableClick;
+  private nextOnClick: RevelioOptions['nextOnClick'] =
+    defaultOptions.nextOnClick;
   private showStepsInfo: RevelioOptions['showStepsInfo'] =
     defaultOptions.showStepsInfo;
   private dialogClass: RevelioOptions['dialogClass'] =
@@ -305,6 +321,14 @@ export class Revelio {
       stepOptions?.persistBlink ??
       this.baseConfig.persistBlink ??
       this.persistBlink;
+    this.disableClick =
+      stepOptions?.disableClick ??
+      this.baseConfig.disableClick ??
+      this.disableClick;
+    this.nextOnClick =
+      stepOptions?.nextOnClick ??
+      this.baseConfig.nextOnClick ??
+      this.nextOnClick;
     this.showStepsInfo =
       stepOptions?.showStepsInfo ??
       this.baseConfig.showStepsInfo ??
@@ -613,7 +637,6 @@ export class Revelio {
 
     if (this.showPrevBtn) {
       const prevBtn = this.createButton(this.prevBtnText, () => {
-        this.onPrev?.();
         this.prevStep();
       });
       prevBtnContainer.appendChild(prevBtn);
@@ -621,7 +644,6 @@ export class Revelio {
 
     if (this.showNextBtn) {
       const nextBtn = this.createButton(this.nextBtnText, () => {
-        this.onNext?.();
         this.nextStep();
       });
       nextBtnContainer.appendChild(nextBtn);
@@ -732,6 +754,14 @@ export class Revelio {
     const element = this.getStepElement(step.element);
     element.style.zIndex = '10000';
     element.style.position = 'relative';
+    if (this.disableClick) {
+      element.style.pointerEvents = 'none';
+    }
+    if (this.nextOnClick) {
+      element.addEventListener('click', () => {
+        this.nextStep();
+      });
+    }
 
     // get the position and dimensions
     const elementRect = element.getBoundingClientRect();
@@ -838,6 +868,8 @@ export class Revelio {
       return;
     }
 
+    this.onNext?.();
+
     this.unmountStep();
 
     this.currentIndex += 1;
@@ -850,6 +882,7 @@ export class Revelio {
       console.warn('no prev step');
       return;
     }
+    this.onPrev?.();
 
     this.unmountStep();
 

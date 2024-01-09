@@ -12,11 +12,12 @@ const tour = new Revelio({
   journey: [
     {
       title: 'Features Link',
-      content: 'Click here to know all the <strong>featues</strong> available',
+      content: 'Click here to know all the <strong>features</strong> available',
       element: '#features-link',
       options: {
         placement: 'bottom',
         persistBlink: true,
+        disableClick: true,
       },
     },
     {
@@ -34,6 +35,7 @@ const tour = new Revelio({
       element: '#learn-more-button',
       options: {
         placement: 'bottom',
+        nextOnClick: true,
       },
     },
     {
@@ -46,7 +48,7 @@ const tour = new Revelio({
     },
     {
       title: 'Features section',
-      content: 'All the featues are in this section',
+      content: 'All the features are in this section',
       element: '#features-section',
     },
     {
