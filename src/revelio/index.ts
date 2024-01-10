@@ -116,6 +116,7 @@ type RevelioSharedConfig = {
 
   /**
    * Function to call before the feature tour starts.
+   * If this method returns false, the regular flow will be interrupted
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onStartBefore?: (...args: any[]) => any;
@@ -128,18 +129,28 @@ type RevelioSharedConfig = {
 
   /**
    * Function to call when this.end() starts its execution.
+   * If this method returns false, the regular flow will be interrupted
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onEndBefore?: (...args: any[]) => any;
 
   /**
-   * Function to call when this.end() finishes its execution.
+   * Function to call after this.end() methods executes this.unmountStep().
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onEndAfterUnmountStep?: (...args: any[]) => any;
+
+  /**
+   * Function to call when the tour has finished. This can happen  because
+   * the user clicked the 'Done' button or becasue the user clicked
+   * the 'Skip' button or outside the dialog)
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onEndAfter?: (...args: any[]) => any;
 
   /**
    * Function to call just when this.nextStep() starts its execution.
+   * If this method returns false, the regular flow will be interrupted
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onNextBefore?: (...args: any[]) => any;
@@ -148,10 +159,17 @@ type RevelioSharedConfig = {
    * Function to call just after the current step is unmounted.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onNextAfterUnmountStep?: (...args: any[]) => any;
+
+  /**
+   * Function to call when this.nextStep() finishes its execution.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onNextAfter?: (...args: any[]) => any;
 
   /**
    * Function to call just when this.prevStep() starts its execution.
+   * If this method returns false, the regular flow will be interrupted
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onPrevBefore?: (...args: any[]) => any;
@@ -160,15 +178,26 @@ type RevelioSharedConfig = {
    * Function to call just after the current step is unmounted.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onPrevAfterUnmountStep?: (...args: any[]) => any;
+
+  /**
+   * Function to call when this.prevStep() finishes its execution.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onPrevAfter?: (...args: any[]) => any;
 
   /**
    * Function to call when the skip button is clicked before the tour ends.
+   * If this method returns false, the regular flow will be interrupted
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onSkip?: (...args: any[]) => any;
+  onSkipBefore?: (...args: any[]) => any;
+
   /**
    * Function to call when the user clicks the 'Done' button and the tour has ended.
+   * Ths is not triggered when skipping the tour (clicking outside the dialog or the skip button)
+   * If you want ton ensure a callback is executed when the tour ends, use 'onEndAfter'
+   * Runs after this.onEndAfter()
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onDone?: (...args: any[]) => any;
@@ -235,9 +264,13 @@ export class Revelio {
    */
   private _journey: JourneyStep[];
   /**
+   * Read only copy of the initial journey
+   */
+  private _initialJourney: JourneyStep[];
+  /**
    * The current step index for the Revelio instance
    */
-  private currentIndex: number;
+  private _currentIndex: number;
 
   private placement: RevelioOptions['placement'] = defaultOptions.placement;
   private preventScrollIntoView: RevelioOptions['preventScrollIntoView'] =
@@ -283,12 +316,15 @@ export class Revelio {
   private onStartBefore: RevelioOptions['onStartBefore'];
   private onStartAfter: RevelioOptions['onStartAfter'];
   private onEndBefore: RevelioOptions['onEndBefore'];
+  private onEndAfterUnmountStep: RevelioOptions['onEndAfterUnmountStep'];
   private onEndAfter: RevelioOptions['onEndAfter'];
   private onNextBefore: RevelioOptions['onNextBefore'];
+  private onNextAfterUnmountStep: RevelioOptions['onNextAfterUnmountStep'];
   private onNextAfter: RevelioOptions['onNextAfter'];
   private onPrevBefore: RevelioOptions['onPrevBefore'];
+  private onPrevAfterUnmountStep: RevelioOptions['onPrevAfterUnmountStep'];
   private onPrevAfter: RevelioOptions['onPrevAfter'];
-  private onSkip: RevelioOptions['onSkip'];
+  private onSkipBefore: RevelioOptions['onSkipBefore'];
   private onDone: RevelioOptions['onDone'];
 
   constructor({
@@ -311,14 +347,59 @@ export class Revelio {
 
     // init props
     this._journey = journey ?? [];
-    this.currentIndex = 0;
+    this._initialJourney = [...journey];
+    this._currentIndex = 0;
     this.setStepProps();
 
     this.rootElement = document.body;
   }
 
+  get currentIndex() {
+    return this._currentIndex;
+  }
+
   get journey() {
     return this._journey;
+  }
+
+  /**
+   * Set the journey to the initial journey, useful when some steps have been added or removed
+   * and want to reset the journey to the initial state
+   */
+  public resetJourney() {
+    this._journey = [...this._initialJourney];
+  }
+
+  /**
+   * @param index The index of the step to go
+   * @param callbacks Callbacks to execute before and after the step is mounted and unmounted
+   * @returns
+   */
+  public async goToStep(
+    index: number,
+    callbacks?: {
+      onGoToStepBefore?: () => void | boolean;
+      onGoToStepAfterUnmountStep?: () => void;
+      onGoToStepAfter?: () => void;
+    },
+  ) {
+    const continueFlow = callbacks?.onGoToStepBefore?.();
+    if (continueFlow === false) {
+      return;
+    }
+    if (index > this._journey.length - 1 || index < 0) {
+      console.warn(`Step ${index} not found`);
+      return;
+    }
+
+    await this.unmountStep();
+    callbacks?.onGoToStepAfterUnmountStep?.();
+
+    this._currentIndex = index;
+    this.setStepProps();
+    this.mountStep();
+
+    callbacks?.onGoToStepAfter?.();
   }
 
   private async getStepElement(
@@ -346,7 +427,7 @@ export class Revelio {
   }
 
   private setStepProps() {
-    const stepOptions = this._journey[this.currentIndex]?.options;
+    const stepOptions = this._journey[this._currentIndex]?.options;
     this.placement = stepOptions?.placement ?? this.baseConfig.placement;
     this.preventScrollIntoView =
       stepOptions?.preventScrollIntoView ??
@@ -376,31 +457,50 @@ export class Revelio {
     this.nextBtnText = stepOptions?.nextBtnText ?? this.baseConfig.nextBtnText;
     this.skipBtnText = stepOptions?.skipBtnText ?? this.baseConfig.skipBtnText;
     this.doneBtnText = stepOptions?.doneBtnText ?? this.baseConfig.doneBtnText;
-    this.showPrevBtn = stepOptions?.showPrevBtn ?? this.currentIndex > 0;
+    this.showPrevBtn = stepOptions?.showPrevBtn ?? this._currentIndex > 0;
     this.showNextBtn =
-      stepOptions?.showNextBtn ?? this.currentIndex < this._journey.length - 1;
+      stepOptions?.showNextBtn ?? this._currentIndex < this._journey.length - 1;
     this.showSkipBtn =
       stepOptions?.showSkipBtn ??
-      (this.currentIndex < this._journey.length - 1 &&
+      (this._currentIndex < this._journey.length - 1 &&
         this.baseConfig.showSkipBtn);
     this.showDoneBtn =
       stepOptions?.showDoneBtn ??
-      (this.currentIndex === this._journey.length - 1 &&
+      (this._currentIndex === this._journey.length - 1 &&
         this.baseConfig.showDoneBtn);
     this.onStartBefore =
       stepOptions?.onStartBefore ?? this.baseConfig.onStartBefore;
     this.onStartAfter =
       stepOptions?.onStartAfter ?? this.baseConfig.onStartAfter;
     this.onEndBefore = stepOptions?.onEndBefore ?? this.baseConfig.onEndBefore;
+    this.onEndAfterUnmountStep =
+      stepOptions?.onEndAfterUnmountStep ??
+      this.baseConfig.onEndAfterUnmountStep;
     this.onEndAfter = stepOptions?.onEndAfter ?? this.baseConfig.onEndAfter;
     this.onNextBefore =
       stepOptions?.onNextBefore ?? this.baseConfig.onNextBefore;
+    this.onNextAfterUnmountStep =
+      stepOptions?.onNextAfterUnmountStep ??
+      this.baseConfig.onNextAfterUnmountStep;
     this.onNextAfter = stepOptions?.onNextAfter ?? this.baseConfig.onNextAfter;
     this.onPrevBefore =
       stepOptions?.onPrevBefore ?? this.baseConfig.onPrevBefore;
+    this.onPrevAfterUnmountStep =
+      stepOptions?.onPrevAfterUnmountStep ??
+      this.baseConfig.onPrevAfterUnmountStep;
     this.onPrevAfter = stepOptions?.onPrevAfter ?? this.baseConfig.onPrevAfter;
-    this.onSkip = stepOptions?.onSkip ?? this.baseConfig.onSkip;
+    this.onSkipBefore =
+      stepOptions?.onSkipBefore ?? this.baseConfig.onSkipBefore;
     this.onDone = stepOptions?.onDone ?? this.baseConfig.onDone;
+  }
+
+  private async skipTour() {
+    const continueFlow = this.onSkipBefore?.();
+    if (continueFlow === false) {
+      return;
+    }
+
+    await this.end();
   }
 
   /**
@@ -417,9 +517,7 @@ export class Revelio {
     overlay.style.zIndex = '9999';
     overlay.id = 'revelio-overlay';
 
-    overlay.onclick = () => {
-      this.end();
-    };
+    overlay.onclick = this.skipTour.bind(this);
 
     this.rootElement.appendChild(overlay);
   }
@@ -621,7 +719,7 @@ export class Revelio {
       stepsInfo.style.fontSize = '0.75rem';
       stepsInfo.style.color = 'rgba(0, 0, 0, 0.5)';
     }
-    stepsInfo.textContent = `${this.currentIndex + 1}/${this._journey.length}`;
+    stepsInfo.textContent = `${this._currentIndex + 1}/${this._journey.length}`;
     if (this.stepsInfoClass) {
       stepsInfo.classList.add(...arrayFromString(this.stepsInfoClass));
     }
@@ -676,18 +774,18 @@ export class Revelio {
     }
 
     if (this.showDoneBtn) {
-      const doneBtn = this.createButton(this.doneBtnText, () => {
-        this.end();
+      const doneBtn = this.createButton(this.doneBtnText, async () => {
+        await this.end();
         this.onDone?.();
       });
       nextBtnContainer.appendChild(doneBtn);
     }
 
     if (this.showSkipBtn) {
-      const skipBtn = this.createButton(this.skipBtnText, () => {
-        this.onSkip?.();
-        this.end();
-      });
+      const skipBtn = this.createButton(
+        this.skipBtnText,
+        this.skipTour.bind(this),
+      );
       centerBtnContainer.appendChild(skipBtn);
     }
 
@@ -808,9 +906,9 @@ export class Revelio {
    * Returns the current step
    */
   private getCurrentStep() {
-    const step = this._journey[this.currentIndex];
+    const step = this._journey[this._currentIndex];
     if (!step) {
-      throw new Error(`Step ${this.currentIndex} not found`);
+      throw new Error(`Step ${this._currentIndex} not found`);
     }
     return step;
   }
@@ -841,14 +939,17 @@ export class Revelio {
   }
 
   public async start() {
-    this.onStartBefore?.();
+    const continueFlow = this.onStartBefore?.();
+    if (continueFlow === false) {
+      return;
+    }
 
     if (Revelio.started) {
       console.warn('Another Revelio tour is already started');
       return;
     }
     Revelio.started = true;
-    this.currentIndex = 0;
+    this._currentIndex = 0;
     this.setStepProps();
 
     this.renderOverlay();
@@ -859,7 +960,10 @@ export class Revelio {
   }
 
   public async end() {
-    this.onEndBefore?.();
+    const continueFlow = this.onEndBefore?.();
+    if (continueFlow === false) {
+      return;
+    }
 
     const overlay = this.rootElement.querySelector('#revelio-overlay');
     if (overlay) {
@@ -868,11 +972,12 @@ export class Revelio {
 
     try {
       await this.unmountStep();
+      this.onEndAfterUnmountStep?.();
     } catch (e) {
       console.error(e); // log the error but continue to end the instance
     }
 
-    this.currentIndex = 0;
+    this._currentIndex = 0;
 
     Revelio.started = false;
 
@@ -940,39 +1045,49 @@ export class Revelio {
   }
 
   public async nextStep() {
-    this.onNextBefore?.();
+    const continueFlow = this.onNextBefore?.();
+    if (continueFlow === false) {
+      return;
+    }
 
-    if (this.currentIndex >= this._journey.length - 1) {
+    if (this._currentIndex >= this._journey.length - 1) {
       console.warn('no next step');
       return;
     }
 
     await this.unmountStep();
 
-    this.onNextAfter?.();
+    this.onNextAfterUnmountStep?.();
 
-    this.currentIndex += 1;
+    this._currentIndex += 1;
     this.setStepProps();
     this.mountStep();
+
+    this.onNextAfter?.();
   }
 
   private boundNextStep = this.nextStep.bind(this);
 
   public async prevStep() {
-    this.onPrevBefore?.();
+    const continueFlow = this.onPrevBefore?.();
+    if (continueFlow === false) {
+      return;
+    }
 
-    if (this.currentIndex <= 0) {
+    if (this._currentIndex <= 0) {
       console.warn('no prev step');
       return;
     }
 
     await this.unmountStep();
 
-    this.onPrevAfter?.();
+    this.onPrevAfterUnmountStep?.();
 
-    this.currentIndex -= 1;
+    this._currentIndex -= 1;
     this.setStepProps();
     this.mountStep();
+
+    this.onPrevAfter?.();
   }
 }
 
