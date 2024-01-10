@@ -3,44 +3,78 @@ import { Revelio } from 'revelio-feature';
 const tour = new Revelio({
   options: {
     onEndAfter: () => {
-      if (tour.journey.length === 7) {
-        // an step has been added, remove the penultimate step
-        tour.removeStep(-3);
-      }
+      tour.resetJourney();
+    },
+    onSkipBefore: function () {
+      console.log('first onSkipBefore in index', tour.currentIndex);
+      tour.addStep(
+        {
+          title: 'Exit',
+          content: 'Do you want to exit the tour?',
+          options: {
+            // to not used the global onSkipBefore that is used add the exit step
+            onSkipBefore: function () {},
+            onPrevBefore: function () {
+              // This will be the 'No' button
+              console.log('nested onPrevBefore in index', tour.currentIndex);
+              // go to the previous step
+              tour.goToStep(tour.currentIndex - 1, {
+                onGoToStepAfterUnmountStep: () => {
+                  // remove the created exit dialog step
+                  tour.removeStep(tour.currentIndex);
+                },
+              });
+              // return false to prevent the tour to go to the previous step as it is already done
+              return false;
+            },
+            doneBtnText: 'Yes',
+            prevBtnText: 'No',
+            placement: 'center',
+            showStepsInfo: false,
+            showPrevBtn: true,
+            showNextBtn: false,
+            showSkipBtn: false,
+            showDoneBtn: true,
+          },
+        },
+        tour.currentIndex + 1,
+      );
+      tour.goToStep(tour.currentIndex + 1);
+      return false;
     },
   },
   journey: [
-    // {
-    //   title: 'Global Clock',
-    //   content:
-    //     'This is the clock to manage your work time, take into account to take breaks',
-    //   element: '#global-clock',
-    //   options: {
-    //     placement: 'right',
-    //   },
-    // },
-    // {
-    //   title: 'Global Clock Controls',
-    //   content:
-    //     'This is the controls to manage your work time, you can start, pause and resume the clock',
-    //   element: '#global-clock-controls',
-    //   options: {
-    //     placement: 'bottom',
-    //   },
-    // },
-    // {
-    //   title: 'Todo List',
-    //   content: 'This is the todo list, you can add, edit and delete todos',
-    //   element: '#todo-list-container',
-    //   options: {
-    //     placement: 'bottom',
-    //   },
-    // },
-    // {
-    //   title: 'New Todo input',
-    //   content: 'This is the input to add a new todo',
-    //   element: '#new-todo-input',
-    // },
+    {
+      title: 'Global Clock',
+      content:
+        'This is the clock to manage your work time, take into account to take breaks',
+      element: '#global-clock',
+      options: {
+        placement: 'right',
+      },
+    },
+    {
+      title: 'Global Clock Controls',
+      content:
+        'This is the controls to manage your work time, you can start, pause and resume the clock',
+      element: '#global-clock-controls',
+      options: {
+        placement: 'bottom',
+      },
+    },
+    {
+      title: 'Todo List',
+      content: 'This is the todo list, you can add, edit and delete todos',
+      element: '#todo-list-container',
+      options: {
+        placement: 'bottom',
+      },
+    },
+    {
+      title: 'New Todo input',
+      content: 'This is the input to add a new todo',
+      element: '#new-todo-input',
+    },
     {
       title: 'Add Todo button',
       content:
@@ -61,14 +95,14 @@ const tour = new Revelio({
               element: `#todo-${newTodoNumber}`,
               options: {
                 onEndAfter: () => {
-                  tour.removeStep(-3);
+                  tour.resetJourney();
                 },
-                onPrevAfter: () => {
-                  tour.removeStep(-3);
+                onPrevAfterUnmountStep: () => {
+                  tour.resetJourney();
                 },
               },
             },
-            -2,
+            tour.currentIndex + 1,
           );
         },
       },
@@ -81,7 +115,6 @@ const tour = new Revelio({
     {
       title: 'The end',
       content: 'This is the end of the tour, enjoy working with this app',
-      element: '#app',
     },
   ],
 });
