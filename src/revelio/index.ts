@@ -293,17 +293,12 @@ export class Revelio {
 
   constructor({
     journey,
-    rootElement,
     options,
   }: {
     /**
      * The feature journey steps for the Revelio instance
      */
     journey: JourneyStep[];
-    /**
-     * The root element for the Revelio instance
-     */
-    rootElement?: HTMLElement | string;
     /**
      * The global options for the Revelio instance. Will be applied to all steps unless overridden by the step's options.
      */
@@ -319,17 +314,7 @@ export class Revelio {
     this.currentIndex = 0;
     this.setStepProps();
 
-    // validate root element or default to document.body
-    const element =
-      typeof rootElement === 'string'
-        ? document.querySelector(rootElement)
-        : rootElement;
-    if (rootElement && !element)
-      throw new Error(`Element ${element} not found`);
-    if (element && !(element instanceof HTMLElement))
-      throw new Error(`Element ${element} is not an HTMLElement`);
-
-    this.rootElement = element ?? document.body;
+    this.rootElement = document.body;
   }
 
   get journey() {
