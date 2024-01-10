@@ -2,45 +2,45 @@ import { Revelio } from 'revelio-feature';
 
 const tour = new Revelio({
   options: {
-    onEnd: () => {
+    onEndAfter: () => {
       if (tour.journey.length === 7) {
         // an step has been added, remove the penultimate step
-        tour.removeStep(-2);
+        tour.removeStep(-3);
       }
     },
   },
   journey: [
-    {
-      title: 'Global Clock',
-      content:
-        'This is the clock to manage your work time, take into account to take breaks',
-      element: '#global-clock',
-      options: {
-        placement: 'right',
-      },
-    },
-    {
-      title: 'Global Clock Controls',
-      content:
-        'This is the controls to manage your work time, you can start, pause and resume the clock',
-      element: '#global-clock-controls',
-      options: {
-        placement: 'bottom',
-      },
-    },
-    {
-      title: 'Todo List',
-      content: 'This is the todo list, you can add, edit and delete todos',
-      element: '#todo-list-container',
-      options: {
-        placement: 'bottom',
-      },
-    },
-    {
-      title: 'New Todo input',
-      content: 'This is the input to add a new todo',
-      element: '#new-todo-input',
-    },
+    // {
+    //   title: 'Global Clock',
+    //   content:
+    //     'This is the clock to manage your work time, take into account to take breaks',
+    //   element: '#global-clock',
+    //   options: {
+    //     placement: 'right',
+    //   },
+    // },
+    // {
+    //   title: 'Global Clock Controls',
+    //   content:
+    //     'This is the controls to manage your work time, you can start, pause and resume the clock',
+    //   element: '#global-clock-controls',
+    //   options: {
+    //     placement: 'bottom',
+    //   },
+    // },
+    // {
+    //   title: 'Todo List',
+    //   content: 'This is the todo list, you can add, edit and delete todos',
+    //   element: '#todo-list-container',
+    //   options: {
+    //     placement: 'bottom',
+    //   },
+    // },
+    // {
+    //   title: 'New Todo input',
+    //   content: 'This is the input to add a new todo',
+    //   element: '#new-todo-input',
+    // },
     {
       title: 'Add Todo button',
       content:
@@ -49,7 +49,7 @@ const tour = new Revelio({
       options: {
         goNextOnClick: true,
         showNextBtn: false,
-        onNext: () => {
+        onNextBefore: () => {
           const itemsAmount =
             document.querySelector<HTMLUListElement>('#todo-list')!.children
               .length;
@@ -58,20 +58,25 @@ const tour = new Revelio({
             {
               title: 'New todo',
               content: `New step added showing the new created todo ${newTodoNumber}`,
-              element: `#todo-${newTodoNumber}-checkbox`,
+              element: `#todo-${newTodoNumber}`,
               options: {
-                onEnd: () => {
-                  tour.removeStep(-2);
+                onEndAfter: () => {
+                  tour.removeStep(-3);
                 },
-                onPrev: () => {
-                  tour.removeStep(-2);
+                onPrevAfter: () => {
+                  tour.removeStep(-3);
                 },
               },
             },
-            -1,
+            -2,
           );
         },
       },
+    },
+    {
+      title: 'Scroll to top',
+      content: 'This is the button to scroll to the top of the page',
+      element: '#scroll-to-top-btn',
     },
     {
       title: 'The end',
@@ -142,16 +147,14 @@ function createTodo(title: string, id: number): HTMLLIElement {
 }
 
 function addTodo() {
-  setTimeout(() => {
-    const todoInput =
-      document.querySelector<HTMLInputElement>('#new-todo-input')!;
-    const todoList = document.querySelector<HTMLUListElement>('#todo-list')!;
-    const itemsAmount = todoList.children.length;
-    const todoItem = createTodo(todoInput.value, itemsAmount + 1);
-    todoList.appendChild(todoItem);
-    todoInput.value = '';
-    todoInput.focus();
-  }, 1000);
+  const todoInput =
+    document.querySelector<HTMLInputElement>('#new-todo-input')!;
+  const todoList = document.querySelector<HTMLUListElement>('#todo-list')!;
+  const itemsAmount = todoList.children.length;
+  const todoItem = createTodo(todoInput.value, itemsAmount + 1);
+  todoList.appendChild(todoItem);
+  todoInput.value = '';
+  todoInput.focus();
 }
 
 document
@@ -160,3 +163,10 @@ document
     e.preventDefault();
     addTodo();
   });
+
+// Add initial todos
+const initialTodos = Array.from({ length: 50 }, (_, i) => `Todo ${i + 1}`);
+initialTodos.forEach((todo, index) => {
+  const todoItem = createTodo(todo, index + 1);
+  document.querySelector<HTMLUListElement>('#todo-list')!.appendChild(todoItem);
+});
