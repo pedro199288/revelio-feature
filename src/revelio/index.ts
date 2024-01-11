@@ -36,6 +36,11 @@ type RevelioSharedConfig = {
   goNextOnClick: boolean;
 
   /**
+   * If true, the user must click on the highlighted element to go to the next step
+   */
+  requireClickToGoNext: boolean;
+
+  /**
    * Time to await for the element to be available
    */
   awaitElementTimeout: number;
@@ -218,6 +223,7 @@ const defaultOptions: RevelioOptions = {
   persistBlink: false,
   disableClick: false,
   goNextOnClick: false,
+  requireClickToGoNext: false,
   awaitElementTimeout: 5000,
   showStepsInfo: true,
   dialogClass: '',
@@ -271,6 +277,8 @@ export class Revelio {
     defaultOptions.disableClick;
   private _goNextOnClick: RevelioOptions['goNextOnClick'] =
     defaultOptions.goNextOnClick;
+  private _requireClickToGoNext: RevelioOptions['requireClickToGoNext'] =
+    defaultOptions.requireClickToGoNext;
   private _awaitElementTimeout: RevelioOptions['awaitElementTimeout'] =
     defaultOptions.awaitElementTimeout;
   private _showStepsInfo: RevelioOptions['showStepsInfo'] =
@@ -385,7 +393,7 @@ export class Revelio {
 
     this._currentIndex = index;
     this._setStepProps();
-    this._mountStep();
+    await this._mountStep();
 
     callbacks?.onGoToStepAfter?.bind(this)();
   }
@@ -427,7 +435,13 @@ export class Revelio {
     this._disableClick =
       stepOptions?.disableClick ?? this._baseConfig.disableClick;
     this._goNextOnClick =
-      stepOptions?.goNextOnClick ?? this._baseConfig.goNextOnClick;
+      stepOptions?.requireClickToGoNext ??
+      this._baseConfig.requireClickToGoNext ??
+      stepOptions?.goNextOnClick ??
+      this._baseConfig.goNextOnClick;
+    this._requireClickToGoNext =
+      stepOptions?.requireClickToGoNext ??
+      this._baseConfig.requireClickToGoNext;
     this._awaitElementTimeout =
       stepOptions?.awaitElementTimeout ?? this._baseConfig.awaitElementTimeout;
     this._showStepsInfo =
@@ -491,13 +505,17 @@ export class Revelio {
     this._onDone = stepOptions?.onDone ?? this._baseConfig.onDone;
   }
 
-  private async _skipTour() {
+  public async skipTour() {
     const continueFlow = this._onSkipBefore?.();
     if (continueFlow === false) {
       return;
     }
 
+    this._keyDownHandlerBlocked = true;
+
     await this.end();
+
+    this._keyDownHandlerBlocked = false;
   }
 
   /**
@@ -514,7 +532,7 @@ export class Revelio {
     overlay.style.zIndex = '9999';
     overlay.id = 'revelio-overlay';
 
-    overlay.onclick = this._skipTour.bind(this);
+    overlay.onclick = this.skipTour.bind(this);
 
     this._rootElement.appendChild(overlay);
   }
@@ -759,15 +777,15 @@ export class Revelio {
     centerBtnContainer.style.justifySelf = 'center';
 
     if (this._showPrevBtn) {
-      const prevBtn = this._createButton(this._prevBtnText, () => {
-        this.prevStep();
+      const prevBtn = this._createButton(this._prevBtnText, async () => {
+        await this.prevStep();
       });
       prevBtnContainer.appendChild(prevBtn);
     }
 
     if (this._showNextBtn) {
-      const nextBtn = this._createButton(this._nextBtnText, () => {
-        this.nextStep();
+      const nextBtn = this._createButton(this._nextBtnText, async () => {
+        await this.nextStep();
       });
       nextBtnContainer.appendChild(nextBtn);
     }
@@ -783,7 +801,7 @@ export class Revelio {
     if (this._showSkipBtn) {
       const skipBtn = this._createButton(
         this._skipBtnText,
-        this._skipTour.bind(this),
+        this.skipTour.bind(this),
       );
       centerBtnContainer.appendChild(skipBtn);
     }
@@ -912,60 +930,108 @@ export class Revelio {
     return step;
   }
 
-  private _scrollStartHandler = async () => {
-    const step = this._getCurrentStep();
-    if (step.element === undefined) {
-      this._placement = 'center';
-      return this._renderStepDialog(step);
-    }
-    const stepElement = await this._getStepElement(step.element);
-
-    const scrollEndHandler = async () => {
-      const { position, dimensions } =
-        await this._highlightStepElement(stepElement);
-
-      this._renderStepDialog(step, position, dimensions);
-    };
-
-    // as dialog and blink are mounted, unmount them to mount them again after scrollend
-    this._unmountDialog();
-    this._unmountBlinkOverlay();
-
-    window.addEventListener('scrollend', scrollEndHandler, {
-      capture: true,
-      once: true,
-    });
-  };
+  private _scrollStartHandler = () => {};
 
   /**
    * Overlay that covers the element for the current step
    */
   private async _mountStep() {
-    const step = this._getCurrentStep();
-    if (step.element === undefined) {
-      this._placement = 'center';
-      return this._renderStepDialog(step);
-    }
-    const stepElement = await this._getStepElement(step.element);
+    return new Promise<void>(async (resolve) => {
+      const step = this._getCurrentStep();
+      if (step.element === undefined) {
+        this._placement = 'center';
+        this._renderStepDialog(step);
+        return resolve();
+      }
+      const stepElement = await this._getStepElement(step.element);
 
-    if (!this._preventScrollIntoView) {
-      window.addEventListener('scroll', this._scrollStartHandler, {
-        capture: true,
-        once: true,
-      });
+      // flag to not resolve if scroll event is triggered
+      let scrollTriggered = false;
+      let resolved = false;
 
-      stepElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'center',
-      });
-    }
+      const scrollStartHandler = async () => {
+        scrollTriggered = true;
+        const step = this._getCurrentStep();
+        if (step.element === undefined) {
+          this._placement = 'center';
+          return this._renderStepDialog(step);
+        }
+        const stepElement = await this._getStepElement(step.element);
 
-    const { position, dimensions } =
-      await this._highlightStepElement(stepElement);
+        const scrollEndHandler = async () => {
+          const { position, dimensions } =
+            await this._highlightStepElement(stepElement);
 
-    this._renderStepDialog(step, position, dimensions);
+          this._renderStepDialog(step, position, dimensions);
+
+          resolved = true;
+          resolve();
+        };
+
+        // as dialog and blink are mounted, unmount them to mount them again after scrollend
+        this._unmountDialog();
+        this._unmountBlinkOverlay();
+
+        window.addEventListener('scrollend', scrollEndHandler, {
+          capture: true,
+          once: true,
+        });
+      };
+
+      this._scrollStartHandler = scrollStartHandler;
+
+      if (!this._preventScrollIntoView) {
+        window.addEventListener('scroll', this._scrollStartHandler, {
+          capture: true,
+          once: true,
+        });
+
+        stepElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'center',
+        });
+      }
+
+      const { position, dimensions } =
+        await this._highlightStepElement(stepElement);
+
+      this._renderStepDialog(step, position, dimensions);
+
+      if (!this._preventScrollIntoView) {
+        setTimeout(() => {
+          if (!scrollTriggered && !resolved) {
+            resolve();
+          }
+        }, 50);
+      } else {
+        resolve();
+      }
+    });
   }
+
+  _keyDownHandlerBlocked = false;
+
+  private _handleKeyDown = async (event: KeyboardEvent) => {
+    if (this._keyDownHandlerBlocked) {
+      return;
+    }
+
+    switch (event.key) {
+      case 'ArrowRight':
+        if (this._requireClickToGoNext) {
+          return;
+        }
+        await this.nextStep();
+        break;
+      case 'ArrowLeft':
+        await this.prevStep();
+        break;
+      case 'Escape':
+        await this.skipTour();
+        break;
+    }
+  };
 
   public async start() {
     const continueFlow = this._onStartBefore?.();
@@ -977,6 +1043,9 @@ export class Revelio {
       console.warn('Another Revelio tour is already started');
       return;
     }
+
+    document.addEventListener('keydown', this._handleKeyDown);
+
     Revelio._started = true;
     this._currentIndex = 0;
     this._setStepProps();
@@ -994,6 +1063,8 @@ export class Revelio {
       return;
     }
 
+    this._keyDownHandlerBlocked = true;
+
     const overlay = this._rootElement.querySelector('#revelio-overlay');
     if (overlay) {
       this._rootElement.removeChild(overlay);
@@ -1008,7 +1079,9 @@ export class Revelio {
 
     this._currentIndex = 0;
 
+    document.removeEventListener('keydown', this._handleKeyDown);
     Revelio._started = false;
+    this._keyDownHandlerBlocked = false;
 
     this._onEndAfter?.();
   }
@@ -1093,9 +1166,22 @@ export class Revelio {
     }
 
     if (this._currentIndex >= this._journey.length - 1) {
-      console.warn('no next step');
+      /**
+       * this is not prevented because when navigating with arrow keys, the user
+       * might expect to finish the tour if there is no next step
+       * the same could be expected if a "Next" button is showed instead of
+       + the "Done" button at the last step
+       */
+      console.warn('no next step, finishing tour');
+      await this.end();
+      this._onDone?.();
       return;
     }
+
+    if (this._currentIndex === this._journey.length - 1) {
+    }
+
+    this._keyDownHandlerBlocked = true;
 
     await this._unmountStep();
 
@@ -1103,9 +1189,11 @@ export class Revelio {
 
     this._currentIndex += 1;
     this._setStepProps();
-    this._mountStep();
+    await this._mountStep();
 
     this._onNextAfter?.();
+
+    this._keyDownHandlerBlocked = false;
   }
 
   private _boundNextStep = this.nextStep.bind(this);
@@ -1121,15 +1209,19 @@ export class Revelio {
       return;
     }
 
+    this._keyDownHandlerBlocked = true;
+
     await this._unmountStep();
 
     this._onPrevAfterUnmountStep?.();
 
     this._currentIndex -= 1;
     this._setStepProps();
-    this._mountStep();
+    await this._mountStep();
 
     this._onPrevAfter?.();
+
+    this._keyDownHandlerBlocked = false;
   }
 }
 
