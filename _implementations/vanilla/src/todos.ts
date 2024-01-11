@@ -25,14 +25,20 @@ const tour = new Revelio({
               // return false to prevent the tour to go to the previous step as it is already done
               return false;
             },
-            doneBtnText: 'Yes',
+            onNextBefore: function () {
+              // This will be the 'Yes' button
+              this.skipTour();
+              // return false to prevent the tour to go to the next step as there won't be any
+              return false;
+            },
+            nextBtnText: 'Yes',
             prevBtnText: 'No',
             placement: 'center',
             showStepsInfo: false,
             showPrevBtn: true,
-            showNextBtn: false,
+            showNextBtn: true,
             showSkipBtn: false,
-            showDoneBtn: true,
+            showDoneBtn: false,
           },
         },
         this.currentIndex + 1,
@@ -80,6 +86,7 @@ const tour = new Revelio({
       element: '#add-todo-btn',
       options: {
         goNextOnClick: true,
+        requireClickToGoNext: true,
         showNextBtn: false,
         onNextBefore: function () {
           const itemsAmount =
