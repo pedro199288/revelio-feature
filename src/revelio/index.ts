@@ -1,3 +1,4 @@
+/* eslint-disable no-use-before-define */
 import { arrayFromString, getNumberFromString } from '../utils';
 
 /**
@@ -118,80 +119,68 @@ type RevelioSharedConfig = {
    * Function to call before the feature tour starts.
    * If this method returns false, the regular flow will be interrupted
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onStartBefore?: (...args: any[]) => any;
+  onStartBefore?: (this: Revelio) => void | boolean;
 
   /**
    * Function to call after the feature tour starts.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onStartAfter?: (...args: any[]) => any;
+  onStartAfter?: (this: Revelio) => void;
 
   /**
    * Function to call when this.end() starts its execution.
    * If this method returns false, the regular flow will be interrupted
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onEndBefore?: (...args: any[]) => any;
+  onEndBefore?: (this: Revelio) => void | boolean;
 
   /**
    * Function to call after this.end() methods executes this.unmountStep().
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onEndAfterUnmountStep?: (...args: any[]) => any;
+  onEndAfterUnmountStep?: (this: Revelio) => void;
 
   /**
    * Function to call when the tour has finished. This can happen  because
    * the user clicked the 'Done' button or becasue the user clicked
    * the 'Skip' button or outside the dialog)
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onEndAfter?: (...args: any[]) => any;
+  onEndAfter?: (this: Revelio) => void;
 
   /**
    * Function to call just when this.nextStep() starts its execution.
    * If this method returns false, the regular flow will be interrupted
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onNextBefore?: (...args: any[]) => any;
+  onNextBefore?: (this: Revelio) => void | boolean;
 
   /**
    * Function to call just after the current step is unmounted.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onNextAfterUnmountStep?: (...args: any[]) => any;
+  onNextAfterUnmountStep?: (this: Revelio) => void;
 
   /**
    * Function to call when this.nextStep() finishes its execution.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onNextAfter?: (...args: any[]) => any;
+  onNextAfter?: (this: Revelio) => void;
 
   /**
    * Function to call just when this.prevStep() starts its execution.
    * If this method returns false, the regular flow will be interrupted
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onPrevBefore?: (...args: any[]) => any;
+  onPrevBefore?: (this: Revelio) => void | boolean;
 
   /**
    * Function to call just after the current step is unmounted.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onPrevAfterUnmountStep?: (...args: any[]) => any;
+  onPrevAfterUnmountStep?: (this: Revelio) => void;
 
   /**
    * Function to call when this.prevStep() finishes its execution.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onPrevAfter?: (...args: any[]) => any;
+  onPrevAfter?: (this: Revelio) => void;
 
   /**
    * Function to call when the skip button is clicked before the tour ends.
    * If this method returns false, the regular flow will be interrupted
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onSkipBefore?: (...args: any[]) => any;
+  onSkipBefore?: (this: Revelio) => void | boolean;
 
   /**
    * Function to call when the user clicks the 'Done' button and the tour has ended.
@@ -199,8 +188,7 @@ type RevelioSharedConfig = {
    * If you want ton ensure a callback is executed when the tour ends, use 'onEndAfter'
    * Runs after this.onEndAfter()
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onDone?: (...args: any[]) => any;
+  onDone?: (this: Revelio) => void;
 };
 
 /**
@@ -378,12 +366,12 @@ export class Revelio {
   public async goToStep(
     index: number,
     callbacks?: {
-      onGoToStepBefore?: () => void | boolean;
-      onGoToStepAfterUnmountStep?: () => void;
-      onGoToStepAfter?: () => void;
+      onGoToStepBefore?: (this: Revelio) => void | boolean;
+      onGoToStepAfterUnmountStep?: (this: Revelio) => void;
+      onGoToStepAfter?: (this: Revelio) => void;
     },
   ) {
-    const continueFlow = callbacks?.onGoToStepBefore?.();
+    const continueFlow = callbacks?.onGoToStepBefore?.bind(this)();
     if (continueFlow === false) {
       return;
     }
@@ -393,13 +381,13 @@ export class Revelio {
     }
 
     await this.unmountStep();
-    callbacks?.onGoToStepAfterUnmountStep?.();
+    callbacks?.onGoToStepAfterUnmountStep?.bind(this)();
 
     this._currentIndex = index;
     this.setStepProps();
     this.mountStep();
 
-    callbacks?.onGoToStepAfter?.();
+    callbacks?.onGoToStepAfter?.bind(this)();
   }
 
   private async getStepElement(
