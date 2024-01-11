@@ -133,7 +133,7 @@ type RevelioSharedConfig = {
   onEndBefore?: (this: Revelio) => void | boolean;
 
   /**
-   * Function to call after this.end() methods executes this.unmountStep().
+   * Function to call after this.end() methods executes this._unmountStep().
    */
   onEndAfterUnmountStep?: (this: Revelio) => void;
 
@@ -238,15 +238,15 @@ const defaultOptions: RevelioOptions = {
 };
 
 export class Revelio {
-  private static started: boolean;
+  private static _started: boolean;
   /**
    * The options for the Revelio instance
    */
-  private baseConfig: RevelioOptions;
+  private _baseConfig: RevelioOptions;
   /**
    * The root element for the Revelio instance
    */
-  private rootElement: HTMLElement;
+  private _rootElement: HTMLElement;
   /**
    * The feature tour for the Revelio instance
    */
@@ -260,60 +260,60 @@ export class Revelio {
    */
   private _currentIndex: number;
 
-  private placement: RevelioOptions['placement'] = defaultOptions.placement;
-  private preventScrollIntoView: RevelioOptions['preventScrollIntoView'] =
+  private _placement: RevelioOptions['placement'] = defaultOptions.placement;
+  private _preventScrollIntoView: RevelioOptions['preventScrollIntoView'] =
     defaultOptions.preventScrollIntoView;
-  private disableBlink: RevelioOptions['disableBlink'] =
+  private _disableBlink: RevelioOptions['disableBlink'] =
     defaultOptions.disableBlink;
-  private persistBlink: RevelioOptions['persistBlink'] =
+  private _persistBlink: RevelioOptions['persistBlink'] =
     defaultOptions.persistBlink;
-  private disableClick: RevelioOptions['disableClick'] =
+  private _disableClick: RevelioOptions['disableClick'] =
     defaultOptions.disableClick;
-  private goNextOnClick: RevelioOptions['goNextOnClick'] =
+  private _goNextOnClick: RevelioOptions['goNextOnClick'] =
     defaultOptions.goNextOnClick;
-  private awaitElementTimeout: RevelioOptions['awaitElementTimeout'] =
+  private _awaitElementTimeout: RevelioOptions['awaitElementTimeout'] =
     defaultOptions.awaitElementTimeout;
-  private showStepsInfo: RevelioOptions['showStepsInfo'] =
+  private _showStepsInfo: RevelioOptions['showStepsInfo'] =
     defaultOptions.showStepsInfo;
-  private dialogClass: RevelioOptions['dialogClass'] =
+  private _dialogClass: RevelioOptions['dialogClass'] =
     defaultOptions.dialogClass;
-  private titleClass: RevelioOptions['titleClass'] = defaultOptions.titleClass;
-  private contentClass: RevelioOptions['contentClass'] =
+  private _titleClass: RevelioOptions['titleClass'] = defaultOptions.titleClass;
+  private _contentClass: RevelioOptions['contentClass'] =
     defaultOptions.contentClass;
-  private stepsInfoClass: RevelioOptions['stepsInfoClass'] =
+  private _stepsInfoClass: RevelioOptions['stepsInfoClass'] =
     defaultOptions.stepsInfoClass;
-  private btnClass: RevelioOptions['btnClass'] = defaultOptions.btnClass;
-  private preventDefaultStyles: RevelioOptions['preventDefaultStyles'] =
+  private _btnClass: RevelioOptions['btnClass'] = defaultOptions.btnClass;
+  private _preventDefaultStyles: RevelioOptions['preventDefaultStyles'] =
     defaultOptions.preventDefaultStyles;
-  private prevBtnText: RevelioOptions['prevBtnText'] =
+  private _prevBtnText: RevelioOptions['prevBtnText'] =
     defaultOptions.prevBtnText;
-  private nextBtnText: RevelioOptions['nextBtnText'] =
+  private _nextBtnText: RevelioOptions['nextBtnText'] =
     defaultOptions.nextBtnText;
-  private skipBtnText: RevelioOptions['skipBtnText'] =
+  private _skipBtnText: RevelioOptions['skipBtnText'] =
     defaultOptions.skipBtnText;
-  private doneBtnText: RevelioOptions['doneBtnText'] =
+  private _doneBtnText: RevelioOptions['doneBtnText'] =
     defaultOptions.doneBtnText;
-  private showPrevBtn: RevelioOptions['showPrevBtn'] =
+  private _showPrevBtn: RevelioOptions['showPrevBtn'] =
     defaultOptions.showPrevBtn;
-  private showNextBtn: RevelioOptions['showNextBtn'] =
+  private _showNextBtn: RevelioOptions['showNextBtn'] =
     defaultOptions.showNextBtn;
-  private showSkipBtn: RevelioOptions['showSkipBtn'] =
+  private _showSkipBtn: RevelioOptions['showSkipBtn'] =
     defaultOptions.showSkipBtn;
-  private showDoneBtn: RevelioOptions['showDoneBtn'] =
+  private _showDoneBtn: RevelioOptions['showDoneBtn'] =
     defaultOptions.showDoneBtn;
-  private onStartBefore: RevelioOptions['onStartBefore'];
-  private onStartAfter: RevelioOptions['onStartAfter'];
-  private onEndBefore: RevelioOptions['onEndBefore'];
-  private onEndAfterUnmountStep: RevelioOptions['onEndAfterUnmountStep'];
-  private onEndAfter: RevelioOptions['onEndAfter'];
-  private onNextBefore: RevelioOptions['onNextBefore'];
-  private onNextAfterUnmountStep: RevelioOptions['onNextAfterUnmountStep'];
-  private onNextAfter: RevelioOptions['onNextAfter'];
-  private onPrevBefore: RevelioOptions['onPrevBefore'];
-  private onPrevAfterUnmountStep: RevelioOptions['onPrevAfterUnmountStep'];
-  private onPrevAfter: RevelioOptions['onPrevAfter'];
-  private onSkipBefore: RevelioOptions['onSkipBefore'];
-  private onDone: RevelioOptions['onDone'];
+  private _onStartBefore: RevelioOptions['onStartBefore'];
+  private _onStartAfter: RevelioOptions['onStartAfter'];
+  private _onEndBefore: RevelioOptions['onEndBefore'];
+  private _onEndAfterUnmountStep: RevelioOptions['onEndAfterUnmountStep'];
+  private _onEndAfter: RevelioOptions['onEndAfter'];
+  private _onNextBefore: RevelioOptions['onNextBefore'];
+  private _onNextAfterUnmountStep: RevelioOptions['onNextAfterUnmountStep'];
+  private _onNextAfter: RevelioOptions['onNextAfter'];
+  private _onPrevBefore: RevelioOptions['onPrevBefore'];
+  private _onPrevAfterUnmountStep: RevelioOptions['onPrevAfterUnmountStep'];
+  private _onPrevAfter: RevelioOptions['onPrevAfter'];
+  private _onSkipBefore: RevelioOptions['onSkipBefore'];
+  private _onDone: RevelioOptions['onDone'];
 
   constructor({
     journey,
@@ -328,7 +328,7 @@ export class Revelio {
      */
     options?: Partial<RevelioOptions>;
   }) {
-    this.baseConfig = {
+    this._baseConfig = {
       ...defaultOptions,
       ...options,
     };
@@ -337,9 +337,9 @@ export class Revelio {
     this._journey = journey ?? [];
     this._initialJourney = [...journey];
     this._currentIndex = 0;
-    this.setStepProps();
+    this._setStepProps();
 
-    this.rootElement = document.body;
+    this._rootElement = document.body;
   }
 
   get currentIndex() {
@@ -380,17 +380,17 @@ export class Revelio {
       return;
     }
 
-    await this.unmountStep();
+    await this._unmountStep();
     callbacks?.onGoToStepAfterUnmountStep?.bind(this)();
 
     this._currentIndex = index;
-    this.setStepProps();
-    this.mountStep();
+    this._setStepProps();
+    this._mountStep();
 
     callbacks?.onGoToStepAfter?.bind(this)();
   }
 
-  private async getStepElement(
+  private async _getStepElement(
     element: string | HTMLElement,
   ): Promise<HTMLElement> {
     let e: HTMLElement | null = null;
@@ -398,7 +398,7 @@ export class Revelio {
       // do some attempts and awaits to get the element, max 5 attempts
       let attempts = 0;
       const attemptsInterval = 100;
-      const maxAttempts = this.awaitElementTimeout / attemptsInterval;
+      const maxAttempts = this._awaitElementTimeout / attemptsInterval;
       while (attempts < maxAttempts) {
         e = document.querySelector(element);
         if (e) break;
@@ -414,76 +414,85 @@ export class Revelio {
     return e;
   }
 
-  private setStepProps() {
+  private _setStepProps() {
     const stepOptions = this._journey[this._currentIndex]?.options;
-    this.placement = stepOptions?.placement ?? this.baseConfig.placement;
-    this.preventScrollIntoView =
+    this._placement = stepOptions?.placement ?? this._baseConfig.placement;
+    this._preventScrollIntoView =
       stepOptions?.preventScrollIntoView ??
-      this.baseConfig.preventScrollIntoView;
-    this.disableBlink =
-      stepOptions?.disableBlink ?? this.baseConfig.disableBlink;
-    this.persistBlink =
-      stepOptions?.persistBlink ?? this.baseConfig.persistBlink;
-    this.disableClick =
-      stepOptions?.disableClick ?? this.baseConfig.disableClick;
-    this.goNextOnClick =
-      stepOptions?.goNextOnClick ?? this.baseConfig.goNextOnClick;
-    this.awaitElementTimeout =
-      stepOptions?.awaitElementTimeout ?? this.baseConfig.awaitElementTimeout;
-    this.showStepsInfo =
-      stepOptions?.showStepsInfo ?? this.baseConfig.showStepsInfo;
-    this.dialogClass = stepOptions?.dialogClass ?? this.baseConfig.dialogClass;
-    this.titleClass = stepOptions?.titleClass ?? this.baseConfig.titleClass;
-    this.contentClass =
-      stepOptions?.contentClass ?? this.baseConfig.contentClass;
-    this.stepsInfoClass =
-      stepOptions?.stepsInfoClass ?? this.baseConfig.stepsInfoClass;
-    this.btnClass = stepOptions?.btnClass ?? this.baseConfig.btnClass;
-    this.preventDefaultStyles =
-      stepOptions?.preventDefaultStyles ?? this.baseConfig.preventDefaultStyles;
-    this.prevBtnText = stepOptions?.prevBtnText ?? this.baseConfig.prevBtnText;
-    this.nextBtnText = stepOptions?.nextBtnText ?? this.baseConfig.nextBtnText;
-    this.skipBtnText = stepOptions?.skipBtnText ?? this.baseConfig.skipBtnText;
-    this.doneBtnText = stepOptions?.doneBtnText ?? this.baseConfig.doneBtnText;
-    this.showPrevBtn = stepOptions?.showPrevBtn ?? this._currentIndex > 0;
-    this.showNextBtn =
+      this._baseConfig.preventScrollIntoView;
+    this._disableBlink =
+      stepOptions?.disableBlink ?? this._baseConfig.disableBlink;
+    this._persistBlink =
+      stepOptions?.persistBlink ?? this._baseConfig.persistBlink;
+    this._disableClick =
+      stepOptions?.disableClick ?? this._baseConfig.disableClick;
+    this._goNextOnClick =
+      stepOptions?.goNextOnClick ?? this._baseConfig.goNextOnClick;
+    this._awaitElementTimeout =
+      stepOptions?.awaitElementTimeout ?? this._baseConfig.awaitElementTimeout;
+    this._showStepsInfo =
+      stepOptions?.showStepsInfo ?? this._baseConfig.showStepsInfo;
+    this._dialogClass =
+      stepOptions?.dialogClass ?? this._baseConfig.dialogClass;
+    this._titleClass = stepOptions?.titleClass ?? this._baseConfig.titleClass;
+    this._contentClass =
+      stepOptions?.contentClass ?? this._baseConfig.contentClass;
+    this._stepsInfoClass =
+      stepOptions?.stepsInfoClass ?? this._baseConfig.stepsInfoClass;
+    this._btnClass = stepOptions?.btnClass ?? this._baseConfig.btnClass;
+    this._preventDefaultStyles =
+      stepOptions?.preventDefaultStyles ??
+      this._baseConfig.preventDefaultStyles;
+    this._prevBtnText =
+      stepOptions?.prevBtnText ?? this._baseConfig.prevBtnText;
+    this._nextBtnText =
+      stepOptions?.nextBtnText ?? this._baseConfig.nextBtnText;
+    this._skipBtnText =
+      stepOptions?.skipBtnText ?? this._baseConfig.skipBtnText;
+    this._doneBtnText =
+      stepOptions?.doneBtnText ?? this._baseConfig.doneBtnText;
+    this._showPrevBtn = stepOptions?.showPrevBtn ?? this._currentIndex > 0;
+    this._showNextBtn =
       stepOptions?.showNextBtn ?? this._currentIndex < this._journey.length - 1;
-    this.showSkipBtn =
+    this._showSkipBtn =
       stepOptions?.showSkipBtn ??
       (this._currentIndex < this._journey.length - 1 &&
-        this.baseConfig.showSkipBtn);
-    this.showDoneBtn =
+        this._baseConfig.showSkipBtn);
+    this._showDoneBtn =
       stepOptions?.showDoneBtn ??
       (this._currentIndex === this._journey.length - 1 &&
-        this.baseConfig.showDoneBtn);
-    this.onStartBefore =
-      stepOptions?.onStartBefore ?? this.baseConfig.onStartBefore;
-    this.onStartAfter =
-      stepOptions?.onStartAfter ?? this.baseConfig.onStartAfter;
-    this.onEndBefore = stepOptions?.onEndBefore ?? this.baseConfig.onEndBefore;
-    this.onEndAfterUnmountStep =
+        this._baseConfig.showDoneBtn);
+    this._onStartBefore =
+      stepOptions?.onStartBefore ?? this._baseConfig.onStartBefore;
+    this._onStartAfter =
+      stepOptions?.onStartAfter ?? this._baseConfig.onStartAfter;
+    this._onEndBefore =
+      stepOptions?.onEndBefore ?? this._baseConfig.onEndBefore;
+    this._onEndAfterUnmountStep =
       stepOptions?.onEndAfterUnmountStep ??
-      this.baseConfig.onEndAfterUnmountStep;
-    this.onEndAfter = stepOptions?.onEndAfter ?? this.baseConfig.onEndAfter;
-    this.onNextBefore =
-      stepOptions?.onNextBefore ?? this.baseConfig.onNextBefore;
-    this.onNextAfterUnmountStep =
+      this._baseConfig.onEndAfterUnmountStep;
+    this._onEndAfter = stepOptions?.onEndAfter ?? this._baseConfig.onEndAfter;
+    this._onNextBefore =
+      stepOptions?.onNextBefore ?? this._baseConfig.onNextBefore;
+    this._onNextAfterUnmountStep =
       stepOptions?.onNextAfterUnmountStep ??
-      this.baseConfig.onNextAfterUnmountStep;
-    this.onNextAfter = stepOptions?.onNextAfter ?? this.baseConfig.onNextAfter;
-    this.onPrevBefore =
-      stepOptions?.onPrevBefore ?? this.baseConfig.onPrevBefore;
-    this.onPrevAfterUnmountStep =
+      this._baseConfig.onNextAfterUnmountStep;
+    this._onNextAfter =
+      stepOptions?.onNextAfter ?? this._baseConfig.onNextAfter;
+    this._onPrevBefore =
+      stepOptions?.onPrevBefore ?? this._baseConfig.onPrevBefore;
+    this._onPrevAfterUnmountStep =
       stepOptions?.onPrevAfterUnmountStep ??
-      this.baseConfig.onPrevAfterUnmountStep;
-    this.onPrevAfter = stepOptions?.onPrevAfter ?? this.baseConfig.onPrevAfter;
-    this.onSkipBefore =
-      stepOptions?.onSkipBefore ?? this.baseConfig.onSkipBefore;
-    this.onDone = stepOptions?.onDone ?? this.baseConfig.onDone;
+      this._baseConfig.onPrevAfterUnmountStep;
+    this._onPrevAfter =
+      stepOptions?.onPrevAfter ?? this._baseConfig.onPrevAfter;
+    this._onSkipBefore =
+      stepOptions?.onSkipBefore ?? this._baseConfig.onSkipBefore;
+    this._onDone = stepOptions?.onDone ?? this._baseConfig.onDone;
   }
 
-  private async skipTour() {
-    const continueFlow = this.onSkipBefore?.();
+  private async _skipTour() {
+    const continueFlow = this._onSkipBefore?.();
     if (continueFlow === false) {
       return;
     }
@@ -494,23 +503,23 @@ export class Revelio {
   /**
    * Global overlay that covers the entire page with a subtle dark background color
    */
-  private renderOverlay() {
+  private _renderOverlay() {
     const overlay = document.createElement('div');
     overlay.style.position = 'fixed';
     overlay.style.top = '0';
     overlay.style.left = '0';
     overlay.style.width = '100%';
     overlay.style.height = '100%';
-    overlay.style.backgroundColor = this.baseConfig.overlayColor;
+    overlay.style.backgroundColor = this._baseConfig.overlayColor;
     overlay.style.zIndex = '9999';
     overlay.id = 'revelio-overlay';
 
-    overlay.onclick = this.skipTour.bind(this);
+    overlay.onclick = this._skipTour.bind(this);
 
-    this.rootElement.appendChild(overlay);
+    this._rootElement.appendChild(overlay);
   }
 
-  private getPlacementArray(
+  private _getPlacementArray(
     placement: RevelioOptions['placement'],
   ): RevelioOptions['placement'][] {
     switch (placement) {
@@ -528,7 +537,7 @@ export class Revelio {
     }
   }
 
-  private setDialogPosition(
+  private _setDialogPosition(
     dialog: HTMLElement,
     elementPosition?: { top: number; left: number },
     elementDimensions?: { width: number; height: number },
@@ -540,7 +549,7 @@ export class Revelio {
     const dialogSpaceHeight = dialogBoundingRect.height + dialogMargin * 2;
 
     // get dialog top and left position, take into account the dialog does not overflow the root element
-    const rootElementRect = this.rootElement.getBoundingClientRect();
+    const rootElementRect = this._rootElement.getBoundingClientRect();
     const rootElementWidth = rootElementRect.width;
     const rootElementHeight = rootElementRect.height;
 
@@ -630,7 +639,7 @@ export class Revelio {
       };
     }
 
-    const placementArray = this.getPlacementArray(this.placement);
+    const placementArray = this._getPlacementArray(this._placement);
 
     const { dialogLeft, dialogTop } = getDialogPosition(placementArray);
 
@@ -645,9 +654,9 @@ export class Revelio {
     dialog.style.visibility = '';
   }
 
-  private createDialog() {
+  private _createDialog() {
     const dialog = document.createElement('div');
-    if (!this.preventDefaultStyles) {
+    if (!this._preventDefaultStyles) {
       // dialog default styles
       dialog.style.backgroundColor = 'white';
       dialog.style.maxWidth = '300px';
@@ -667,39 +676,39 @@ export class Revelio {
     dialog.style.visibility = 'hidden';
 
     // dialog class
-    if (this.dialogClass) {
-      dialog.classList.add(...arrayFromString(this.dialogClass));
+    if (this._dialogClass) {
+      dialog.classList.add(...arrayFromString(this._dialogClass));
     }
 
     return dialog;
   }
 
-  private createTitle(step: JourneyStep) {
+  private _createTitle(step: JourneyStep) {
     const title = document.createElement('div');
     title.textContent = step.title;
-    if (!this.preventDefaultStyles) {
+    if (!this._preventDefaultStyles) {
       title.style.fontWeight = 'bold';
       title.style.fontSize = '1.5rem';
       title.style.marginBottom = '1rem';
     }
-    if (this.titleClass) {
-      title.classList.add(...arrayFromString(this.titleClass));
+    if (this._titleClass) {
+      title.classList.add(...arrayFromString(this._titleClass));
     }
     return title;
   }
 
-  private createContent(step: JourneyStep) {
+  private _createContent(step: JourneyStep) {
     const content = document.createElement('div');
     content.innerHTML = step.content;
-    if (this.contentClass) {
-      content.classList.add(...arrayFromString(this.contentClass));
+    if (this._contentClass) {
+      content.classList.add(...arrayFromString(this._contentClass));
     }
     return content;
   }
 
-  private createStepsInfo() {
+  private _createStepsInfo() {
     const stepsInfo = document.createElement('div');
-    if (!this.preventDefaultStyles) {
+    if (!this._preventDefaultStyles) {
       stepsInfo.style.display = 'flex';
       stepsInfo.style.justifyContent = 'center';
       stepsInfo.style.marginTop = '0.5rem';
@@ -708,17 +717,17 @@ export class Revelio {
       stepsInfo.style.color = 'rgba(0, 0, 0, 0.5)';
     }
     stepsInfo.textContent = `${this._currentIndex + 1}/${this._journey.length}`;
-    if (this.stepsInfoClass) {
-      stepsInfo.classList.add(...arrayFromString(this.stepsInfoClass));
+    if (this._stepsInfoClass) {
+      stepsInfo.classList.add(...arrayFromString(this._stepsInfoClass));
     }
     return stepsInfo;
   }
 
-  private createButton(text: string, onClick: () => void) {
+  private _createButton(text: string, onClick: () => void) {
     const btn = document.createElement('button');
     btn.textContent = text;
     btn.addEventListener('click', onClick);
-    if (!this.preventDefaultStyles) {
+    if (!this._preventDefaultStyles) {
       btn.style.padding = '0.25rem 1rem';
       btn.style.borderRadius = '0.25rem';
       btn.style.border = 'none';
@@ -727,13 +736,13 @@ export class Revelio {
       btn.style.fontWeight = '600';
       btn.style.fontSize = '1rem';
     }
-    if (this.btnClass) {
-      btn.classList.add(...arrayFromString(this.btnClass));
+    if (this._btnClass) {
+      btn.classList.add(...arrayFromString(this._btnClass));
     }
     return btn;
   }
 
-  private createButtonsContainer() {
+  private _createButtonsContainer() {
     const buttonsContainer = document.createElement('div');
     buttonsContainer.style.display = 'grid';
     buttonsContainer.style.gridTemplateColumns = '1fr 1fr 1fr';
@@ -747,32 +756,32 @@ export class Revelio {
     nextBtnContainer.style.justifySelf = 'end';
     centerBtnContainer.style.justifySelf = 'center';
 
-    if (this.showPrevBtn) {
-      const prevBtn = this.createButton(this.prevBtnText, () => {
+    if (this._showPrevBtn) {
+      const prevBtn = this._createButton(this._prevBtnText, () => {
         this.prevStep();
       });
       prevBtnContainer.appendChild(prevBtn);
     }
 
-    if (this.showNextBtn) {
-      const nextBtn = this.createButton(this.nextBtnText, () => {
+    if (this._showNextBtn) {
+      const nextBtn = this._createButton(this._nextBtnText, () => {
         this.nextStep();
       });
       nextBtnContainer.appendChild(nextBtn);
     }
 
-    if (this.showDoneBtn) {
-      const doneBtn = this.createButton(this.doneBtnText, async () => {
+    if (this._showDoneBtn) {
+      const doneBtn = this._createButton(this._doneBtnText, async () => {
         await this.end();
-        this.onDone?.();
+        this._onDone?.();
       });
       nextBtnContainer.appendChild(doneBtn);
     }
 
-    if (this.showSkipBtn) {
-      const skipBtn = this.createButton(
-        this.skipBtnText,
-        this.skipTour.bind(this),
+    if (this._showSkipBtn) {
+      const skipBtn = this._createButton(
+        this._skipBtnText,
+        this._skipTour.bind(this),
       );
       centerBtnContainer.appendChild(skipBtn);
     }
@@ -783,32 +792,32 @@ export class Revelio {
     return buttonsContainer;
   }
 
-  private renderStepDialog(
+  private _renderStepDialog(
     step: JourneyStep,
     elementPosition?: { top: number; left: number },
     elementDimensions?: { width: number; height: number },
   ) {
-    const dialog = this.createDialog();
-    const title = this.createTitle(step);
+    const dialog = this._createDialog();
+    const title = this._createTitle(step);
     dialog.appendChild(title);
-    const content = this.createContent(step);
+    const content = this._createContent(step);
     dialog.appendChild(content);
 
-    if (this.showStepsInfo) {
-      const stepsInfo = this.createStepsInfo();
+    if (this._showStepsInfo) {
+      const stepsInfo = this._createStepsInfo();
       dialog.appendChild(stepsInfo);
     }
 
-    const buttonsContainer = this.createButtonsContainer();
+    const buttonsContainer = this._createButtonsContainer();
 
     dialog.appendChild(buttonsContainer);
 
-    this.rootElement.appendChild(dialog);
+    this._rootElement.appendChild(dialog);
 
-    this.setDialogPosition(dialog, elementPosition, elementDimensions);
+    this._setDialogPosition(dialog, elementPosition, elementDimensions);
   }
 
-  private createBlinkOverlay(
+  private _createBlinkOverlay(
     element: HTMLElement,
     top: number,
     left: number,
@@ -832,7 +841,7 @@ export class Revelio {
       window.getComputedStyle(element).borderRadius;
     blinkOverlay.id = 'revelio-blink-overlay';
 
-    this.rootElement.appendChild(blinkOverlay);
+    this._rootElement.appendChild(blinkOverlay);
 
     blinkOverlay.animate(
       [
@@ -848,34 +857,34 @@ export class Revelio {
       ],
       {
         duration: 1000,
-        iterations: this.persistBlink ? Infinity : 1,
+        iterations: this._persistBlink ? Infinity : 1,
         easing: 'ease-in',
       },
     );
   }
 
-  private async highlightStepElement(element: HTMLElement) {
+  private async _highlightStepElement(element: HTMLElement) {
     const elementComputedStyle = window.getComputedStyle(element);
     element.style.zIndex = '10000';
     if (elementComputedStyle.position === 'static') {
       element.style.position = 'relative';
     }
-    if (this.disableClick) {
+    if (this._disableClick) {
       element.style.pointerEvents = 'none';
     }
-    if (this.goNextOnClick) {
-      element.addEventListener('click', this.boundNextStep);
+    if (this._goNextOnClick) {
+      element.addEventListener('click', this._boundNextStep);
     }
 
     // get the position and dimensions
     const elementRect = element.getBoundingClientRect();
-    const rootRect = this.rootElement.getBoundingClientRect();
+    const rootRect = this._rootElement.getBoundingClientRect();
     const top = elementRect.top - rootRect.top;
     const left = elementRect.left - rootRect.left;
     const { width, height } = elementRect;
 
-    if (!this.disableBlink) {
-      this.createBlinkOverlay(element, top, left, width, height);
+    if (!this._disableBlink) {
+      this._createBlinkOverlay(element, top, left, width, height);
     }
 
     return {
@@ -893,7 +902,7 @@ export class Revelio {
   /**
    * Returns the current step
    */
-  private getCurrentStep() {
+  private _getCurrentStep() {
     const step = this._journey[this._currentIndex];
     if (!step) {
       throw new Error(`Step ${this._currentIndex} not found`);
@@ -904,15 +913,15 @@ export class Revelio {
   /**
    * Overlay that covers the element for the current step
    */
-  private async mountStep() {
-    const step = this.getCurrentStep();
+  private async _mountStep() {
+    const step = this._getCurrentStep();
     if (step.element === undefined) {
-      this.placement = 'center';
-      return this.renderStepDialog(step);
+      this._placement = 'center';
+      return this._renderStepDialog(step);
     }
-    const stepElement = await this.getStepElement(step.element);
+    const stepElement = await this._getStepElement(step.element);
 
-    if (!this.preventScrollIntoView) {
+    if (!this._preventScrollIntoView) {
       stepElement.scrollIntoView({
         behavior: 'instant',
         block: 'center',
@@ -921,68 +930,68 @@ export class Revelio {
     }
 
     const { position, dimensions } =
-      await this.highlightStepElement(stepElement);
+      await this._highlightStepElement(stepElement);
 
-    this.renderStepDialog(step, position, dimensions);
+    this._renderStepDialog(step, position, dimensions);
   }
 
   public async start() {
-    const continueFlow = this.onStartBefore?.();
+    const continueFlow = this._onStartBefore?.();
     if (continueFlow === false) {
       return;
     }
 
-    if (Revelio.started) {
+    if (Revelio._started) {
       console.warn('Another Revelio tour is already started');
       return;
     }
-    Revelio.started = true;
+    Revelio._started = true;
     this._currentIndex = 0;
-    this.setStepProps();
+    this._setStepProps();
 
-    this.renderOverlay();
+    this._renderOverlay();
 
-    await this.mountStep();
+    await this._mountStep();
 
-    this.onStartAfter?.();
+    this._onStartAfter?.();
   }
 
   public async end() {
-    const continueFlow = this.onEndBefore?.();
+    const continueFlow = this._onEndBefore?.();
     if (continueFlow === false) {
       return;
     }
 
-    const overlay = this.rootElement.querySelector('#revelio-overlay');
+    const overlay = this._rootElement.querySelector('#revelio-overlay');
     if (overlay) {
-      this.rootElement.removeChild(overlay);
+      this._rootElement.removeChild(overlay);
     }
 
     try {
-      await this.unmountStep();
-      this.onEndAfterUnmountStep?.();
+      await this._unmountStep();
+      this._onEndAfterUnmountStep?.();
     } catch (e) {
       console.error(e); // log the error but continue to end the instance
     }
 
     this._currentIndex = 0;
 
-    Revelio.started = false;
+    Revelio._started = false;
 
-    this.onEndAfter?.();
+    this._onEndAfter?.();
   }
 
-  public async unmountStep() {
-    const step = this.getCurrentStep();
+  private async _unmountStep() {
+    const step = this._getCurrentStep();
 
-    const dialog = this.rootElement.querySelector('#revelio-dialog');
+    const dialog = this._rootElement.querySelector('#revelio-dialog');
 
     if (dialog) {
-      this.rootElement.removeChild(dialog);
+      this._rootElement.removeChild(dialog);
     }
 
     if (step.element !== undefined) {
-      const element = await this.getStepElement(step.element);
+      const element = await this._getStepElement(step.element);
 
       element.style.zIndex = '';
       element.style.position = '';
@@ -991,15 +1000,15 @@ export class Revelio {
         element.removeAttribute('style');
       }
 
-      if (this.goNextOnClick) {
-        element.removeEventListener('click', this.boundNextStep);
+      if (this._goNextOnClick) {
+        element.removeEventListener('click', this._boundNextStep);
       }
 
-      const blinkOverlay = this.rootElement.querySelector(
+      const blinkOverlay = this._rootElement.querySelector(
         '#revelio-blink-overlay',
       );
       if (blinkOverlay) {
-        this.rootElement.removeChild(blinkOverlay);
+        this._rootElement.removeChild(blinkOverlay);
       }
     }
   }
@@ -1033,7 +1042,7 @@ export class Revelio {
   }
 
   public async nextStep() {
-    const continueFlow = this.onNextBefore?.();
+    const continueFlow = this._onNextBefore?.();
     if (continueFlow === false) {
       return;
     }
@@ -1043,21 +1052,21 @@ export class Revelio {
       return;
     }
 
-    await this.unmountStep();
+    await this._unmountStep();
 
-    this.onNextAfterUnmountStep?.();
+    this._onNextAfterUnmountStep?.();
 
     this._currentIndex += 1;
-    this.setStepProps();
-    this.mountStep();
+    this._setStepProps();
+    this._mountStep();
 
-    this.onNextAfter?.();
+    this._onNextAfter?.();
   }
 
-  private boundNextStep = this.nextStep.bind(this);
+  private _boundNextStep = this.nextStep.bind(this);
 
   public async prevStep() {
-    const continueFlow = this.onPrevBefore?.();
+    const continueFlow = this._onPrevBefore?.();
     if (continueFlow === false) {
       return;
     }
@@ -1067,15 +1076,15 @@ export class Revelio {
       return;
     }
 
-    await this.unmountStep();
+    await this._unmountStep();
 
-    this.onPrevAfterUnmountStep?.();
+    this._onPrevAfterUnmountStep?.();
 
     this._currentIndex -= 1;
-    this.setStepProps();
-    this.mountStep();
+    this._setStepProps();
+    this._mountStep();
 
-    this.onPrevAfter?.();
+    this._onPrevAfter?.();
   }
 }
 
