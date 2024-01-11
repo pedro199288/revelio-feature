@@ -2,12 +2,11 @@ import { Revelio } from 'revelio-feature';
 
 const tour = new Revelio({
   options: {
-    onEndAfter: () => {
-      tour.resetJourney();
+    onEndAfter: function () {
+      this.resetJourney();
     },
     onSkipBefore: function () {
-      console.log('first onSkipBefore in index', tour.currentIndex);
-      tour.addStep(
+      this.addStep(
         {
           title: 'Exit',
           content: 'Do you want to exit the tour?',
@@ -16,12 +15,11 @@ const tour = new Revelio({
             onSkipBefore: function () {},
             onPrevBefore: function () {
               // This will be the 'No' button
-              console.log('nested onPrevBefore in index', tour.currentIndex);
               // go to the previous step
-              tour.goToStep(tour.currentIndex - 1, {
-                onGoToStepAfterUnmountStep: () => {
+              this.goToStep(this.currentIndex - 1, {
+                onGoToStepAfterUnmountStep: function () {
                   // remove the created exit dialog step
-                  tour.removeStep(tour.currentIndex);
+                  this.removeStep(this.currentIndex);
                 },
               });
               // return false to prevent the tour to go to the previous step as it is already done
@@ -37,9 +35,9 @@ const tour = new Revelio({
             showDoneBtn: true,
           },
         },
-        tour.currentIndex + 1,
+        this.currentIndex + 1,
       );
-      tour.goToStep(tour.currentIndex + 1);
+      this.goToStep(this.currentIndex + 1);
       return false;
     },
   },
@@ -83,26 +81,26 @@ const tour = new Revelio({
       options: {
         goNextOnClick: true,
         showNextBtn: false,
-        onNextBefore: () => {
+        onNextBefore: function () {
           const itemsAmount =
             document.querySelector<HTMLUListElement>('#todo-list')!.children
               .length;
           const newTodoNumber = itemsAmount + 1;
-          tour.addStep(
+          this.addStep(
             {
               title: 'New todo',
               content: `New step added showing the new created todo ${newTodoNumber}`,
               element: `#todo-${newTodoNumber}`,
               options: {
-                onEndAfter: () => {
-                  tour.resetJourney();
+                onEndAfter: function () {
+                  this.resetJourney();
                 },
-                onPrevAfterUnmountStep: () => {
-                  tour.resetJourney();
+                onPrevAfterUnmountStep: function () {
+                  this.resetJourney();
                 },
               },
             },
-            tour.currentIndex + 1,
+            this.currentIndex + 1,
           );
         },
       },
