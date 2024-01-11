@@ -1,6 +1,6 @@
 {
   "name": "revelio-feature",
-  "version": "1.1.0",
+  "version": "1.1.11",
   "description": "Simple library to reveal/onboard new features to the users in a web or web application",
   "author": "Pedro Monteagudo (https://github.com/pedro199288)",
   "main": "dist/index.js",
@@ -32,7 +32,8 @@
     "typescript": "5.3.3"
   },
   "files": [
-    "dist"
+    "dist/**/*.js",
+    "dist/**/*.d.ts"
   ],
   "repository": "github:pedro199288/revelio-feature",
   "license": "MIT"
