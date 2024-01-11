@@ -651,7 +651,9 @@ export class Revelio {
     }px)`;
 
     // Set CSS to make it visible
-    dialog.style.visibility = '';
+    setTimeout(() => {
+      dialog.style.visibility = '';
+    }, 25);
   }
 
   private _createDialog() {
@@ -910,6 +912,31 @@ export class Revelio {
     return step;
   }
 
+  private _scrollStartHandler = async () => {
+    const step = this._getCurrentStep();
+    if (step.element === undefined) {
+      this._placement = 'center';
+      return this._renderStepDialog(step);
+    }
+    const stepElement = await this._getStepElement(step.element);
+
+    const scrollEndHandler = async () => {
+      const { position, dimensions } =
+        await this._highlightStepElement(stepElement);
+
+      this._renderStepDialog(step, position, dimensions);
+    };
+
+    // as dialog and blink are mounted, unmount them to mount them again after scrollend
+    this._unmountDialog();
+    this._unmountBlinkOverlay();
+
+    window.addEventListener('scrollend', scrollEndHandler, {
+      capture: true,
+      once: true,
+    });
+  };
+
   /**
    * Overlay that covers the element for the current step
    */
@@ -922,8 +949,13 @@ export class Revelio {
     const stepElement = await this._getStepElement(step.element);
 
     if (!this._preventScrollIntoView) {
+      window.addEventListener('scroll', this._scrollStartHandler, {
+        capture: true,
+        once: true,
+      });
+
       stepElement.scrollIntoView({
-        behavior: 'instant',
+        behavior: 'smooth',
         block: 'center',
         inline: 'center',
       });
@@ -981,14 +1013,27 @@ export class Revelio {
     this._onEndAfter?.();
   }
 
-  private async _unmountStep() {
-    const step = this._getCurrentStep();
-
+  private _unmountDialog() {
     const dialog = this._rootElement.querySelector('#revelio-dialog');
 
     if (dialog) {
       this._rootElement.removeChild(dialog);
     }
+  }
+
+  private _unmountBlinkOverlay() {
+    const blinkOverlay = this._rootElement.querySelector(
+      '#revelio-blink-overlay',
+    );
+    if (blinkOverlay) {
+      this._rootElement.removeChild(blinkOverlay);
+    }
+  }
+
+  private async _unmountStep() {
+    const step = this._getCurrentStep();
+
+    this._unmountDialog();
 
     if (step.element !== undefined) {
       const element = await this._getStepElement(step.element);
@@ -1004,13 +1049,13 @@ export class Revelio {
         element.removeEventListener('click', this._boundNextStep);
       }
 
-      const blinkOverlay = this._rootElement.querySelector(
-        '#revelio-blink-overlay',
-      );
-      if (blinkOverlay) {
-        this._rootElement.removeChild(blinkOverlay);
-      }
+      this._unmountBlinkOverlay();
     }
+
+    // remove scroll listener if any
+    window.removeEventListener('scroll', this._scrollStartHandler, {
+      capture: true,
+    });
   }
 
   /**
