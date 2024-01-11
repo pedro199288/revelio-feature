@@ -9,7 +9,7 @@
     "start": "bun src/index.ts",
     "dev": "bun --watch src/index.ts",
     "build:watch": "concurrently -n types,build -c \"bgMagenta,bgBlue\" \"bun run build:declaration --watch\" \"bun build src/index.ts --outdir=dist --watch\"",
-    "build": "bun build src/index.ts --outdir=dist && bun run build:declaration",
+    "build": "bun build src/index.ts --outdir=dist & bun run build:declaration",
     "build:declaration": "tsc --emitDeclarationOnly --project tsconfig.types.json",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "format": "prettier --write 'src/**/*.{ts,tsx,json}'",
