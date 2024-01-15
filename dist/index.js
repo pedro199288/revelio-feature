@@ -8,6 +8,7 @@ var getNumberFromString = function(string) {
 
 // src/revelio/index.ts
 var defaultOptions = {
+  rootElement: document.body,
   placement: "bottom",
   preventScrollIntoView: false,
   stackingContextAncestors: undefined,
@@ -40,7 +41,7 @@ var zIndexOverlayValue = "9999";
 class Revelio {
   static _started;
   _baseConfig;
-  _rootElement;
+  _rootElement = document.body;
   _journey;
   _initialJourney;
   _currentIndex;
@@ -95,8 +96,6 @@ class Revelio {
     this._journey = journey ?? [];
     this._initialJourney = [...journey];
     this._currentIndex = 0;
-    this._setStepProps();
-    this._rootElement = document.body;
   }
   get currentIndex() {
     return this._currentIndex;
@@ -119,7 +118,7 @@ class Revelio {
     await this._unmountStep();
     callbacks?.onGoToStepAfterUnmountStep?.bind(this)();
     this._currentIndex = index;
-    this._setStepProps();
+    await this._setStepProps();
     await this._mountStep();
     callbacks?.onGoToStepAfter?.bind(this)();
   }
@@ -145,8 +144,10 @@ class Revelio {
       throw new Error(`Element ${element} is not an HTMLElement`);
     return e;
   }
-  _setStepProps() {
+  async _setStepProps() {
     const stepOptions = this._journey[this._currentIndex]?.options;
+    const rootElement = await this._getElement(stepOptions?.rootElement ?? this._baseConfig.rootElement);
+    this._rootElement = rootElement;
     this._placement = stepOptions?.placement ?? this._baseConfig.placement;
     this._preventScrollIntoView = stepOptions?.preventScrollIntoView ?? this._baseConfig.preventScrollIntoView;
     const stackingContextAncestors = stepOptions?.stackingContextAncestors ?? this._baseConfig.stackingContextAncestors;
@@ -213,6 +214,7 @@ class Revelio {
     overlay.id = "revelio-overlay";
     overlay.onclick = this.skipTour.bind(this);
     this._rootElement.appendChild(overlay);
+    return overlay;
   }
   _getPlacementArray(placement) {
     switch (placement) {
@@ -423,7 +425,19 @@ class Revelio {
     buttonsContainer.appendChild(nextBtnContainer);
     return buttonsContainer;
   }
-  _renderStepDialog(step, elementPosition, elementDimensions) {
+  async _createOrMoveRootOverlay() {
+    let currentRootOverlay = document.querySelector("#revelio-overlay");
+    if (currentRootOverlay) {
+      this._rootElement.appendChild(currentRootOverlay);
+    } else {
+      currentRootOverlay = this._renderOverlay();
+    }
+    currentRootOverlay ??= document.querySelector("#revelio-overlay");
+    if (!currentRootOverlay) {
+      this._renderOverlay();
+    }
+  }
+  async _renderStepDialog(step, elementPosition, elementDimensions) {
     const dialog = this._createDialog();
     const title = this._createTitle(step);
     dialog.appendChild(title);
@@ -435,6 +449,7 @@ class Revelio {
     }
     const buttonsContainer = this._createButtonsContainer();
     dialog.appendChild(buttonsContainer);
+    await this._createOrMoveRootOverlay();
     this._rootElement.appendChild(dialog);
     this._setDialogPosition(dialog, elementPosition, elementDimensions);
   }
@@ -527,8 +542,8 @@ class Revelio {
       }
     };
   }
-  _getCurrentStep() {
-    const step = this._journey[this._currentIndex];
+  _getStep(index = this._currentIndex) {
+    const step = this._journey[index];
     if (!step) {
       throw new Error(`Step ${this._currentIndex} not found`);
     }
@@ -538,10 +553,10 @@ class Revelio {
   };
   async _mountStep() {
     return new Promise(async (resolve) => {
-      const step = this._getCurrentStep();
+      const step = this._getStep();
       if (step.element === undefined) {
         this._placement = "center";
-        this._renderStepDialog(step);
+        await this._renderStepDialog(step);
         return resolve();
       }
       const stepElement = await this._getElement(step.element);
@@ -549,15 +564,16 @@ class Revelio {
       let resolved = false;
       const scrollStartHandler = async () => {
         scrollTriggered = true;
-        const step2 = this._getCurrentStep();
+        const step2 = this._getStep();
         if (step2.element === undefined) {
           this._placement = "center";
-          return this._renderStepDialog(step2);
+          await this._renderStepDialog(step2);
+          return;
         }
         const stepElement2 = await this._getElement(step2.element);
         const scrollEndHandler = async () => {
           const { position: position2, dimensions: dimensions2 } = await this._highlightStepElement(stepElement2);
-          this._renderStepDialog(step2, position2, dimensions2);
+          await this._renderStepDialog(step2, position2, dimensions2);
           resolved = true;
           resolve();
         };
@@ -623,8 +639,7 @@ class Revelio {
     document.addEventListener("keydown", this._handleKeyDown);
     Revelio._started = true;
     this._currentIndex = 0;
-    this._setStepProps();
-    this._renderOverlay();
+    await this._setStepProps();
     await this._mountStep();
     this._transitionBlocked = false;
     this._onStartAfter?.();
@@ -680,7 +695,7 @@ class Revelio {
     }
   }
   async _unmountStep() {
-    const step = this._getCurrentStep();
+    const step = this._getStep();
     this._unmountDialog();
     if (step.element !== undefined) {
       const element = await this._getElement(step.element);
@@ -727,13 +742,11 @@ class Revelio {
       this._onDone?.();
       return;
     }
-    if (this._currentIndex === this._journey.length - 1) {
-    }
     this._transitionBlocked = true;
     await this._unmountStep();
     this._onNextAfterUnmountStep?.();
     this._currentIndex += 1;
-    this._setStepProps();
+    await this._setStepProps();
     await this._mountStep();
     this._transitionBlocked = false;
     this._onNextAfter?.();
@@ -755,7 +768,7 @@ class Revelio {
     await this._unmountStep();
     this._onPrevAfterUnmountStep?.();
     this._currentIndex -= 1;
-    this._setStepProps();
+    await this._setStepProps();
     await this._mountStep();
     this._transitionBlocked = false;
     this._onPrevAfter?.();

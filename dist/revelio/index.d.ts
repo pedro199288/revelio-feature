@@ -2,6 +2,7 @@
  * Config that is shared between the 'options' and 'journey.[].options' properties
  */
 type RevelioSharedConfig = {
+    rootElement: string | HTMLElement;
     /**
      * The placement of the feature tour step. Can be 'top', 'bottom', 'left', 'right' or 'center'.
      */
@@ -291,14 +292,15 @@ export declare class Revelio {
     private _createStepsInfo;
     private _createButton;
     private _createButtonsContainer;
+    private _createOrMoveRootOverlay;
     private _renderStepDialog;
     private _createBlinkOverlay;
     private _createStackedContextsOverlays;
     private _highlightStepElement;
     /**
-     * Returns the current step
+     * Returns the step for the given index, or the current step if no index is provided
      */
-    private _getCurrentStep;
+    private _getStep;
     private _scrollStartHandler;
     /**
      * Overlay that covers the element for the current step
