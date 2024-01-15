@@ -15,7 +15,7 @@ type RevelioSharedConfig = {
      * This ensures that all the ancestors are placed above the overlay so the element is properly highlighted.
      * TODO: explain this better in docs
      */
-    stackingContextAncestors?: (string | HTMLElement)[];
+    stackingContextAncestors: (string | HTMLElement)[] | undefined;
     /**
      * If true, disables blinking the element for the current step.
      */
@@ -35,7 +35,7 @@ type RevelioSharedConfig = {
     /**
      * If true, the user must click on the highlighted element to go to the next step
      */
-    requireClickToGoNext: boolean;
+    requireClickToGoNext: boolean | undefined;
     /**
      * Time to await for the element to be available
      */
