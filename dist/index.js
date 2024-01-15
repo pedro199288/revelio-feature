@@ -15,7 +15,7 @@ var defaultOptions = {
   persistBlink: false,
   disableClick: false,
   goNextOnClick: false,
-  requireClickToGoNext: false,
+  requireClickToGoNext: undefined,
   awaitElementTimeout: 5000,
   showStepsInfo: true,
   dialogClass: "",
