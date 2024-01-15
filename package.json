@@ -1,6 +1,6 @@
 {
   "name": "revelio-feature",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Simple library to reveal/onboard new features to the users in a web or web application",
   "author": "Pedro Monteagudo (https://github.com/pedro199288)",
   "browser": "dist/index.js",
