@@ -16,6 +16,13 @@ type RevelioSharedConfig = {
   preventScrollIntoView: boolean;
 
   /**
+   * The stacking context ancestors of the element, if any. This is useful when the element is inside a stacking context.
+   * This ensures that all the ancestors are placed above the overlay so the element is properly highlighted.
+   * TODO: explain this better in docs
+   */
+  stackingContextAncestors?: (string | HTMLElement)[];
+
+  /**
    * If true, disables blinking the element for the current step.
    */
   disableBlink: boolean;
@@ -207,8 +214,17 @@ type RevelioOptions = RevelioSharedConfig & {
  * Journey passed to the Revelio constructor
  */
 type JourneyStep = {
+  /**
+   * The element to highlight. Can be a query selector or an HTMLElement.
+   */
   element?: string | HTMLElement;
+  /**
+   * The title of the step.
+   */
   title: string;
+  /**
+   * The content of the step. A string that supports HTML.
+   */
   content: string;
   /**
    * The options for the step. These will override the global options.
@@ -219,6 +235,7 @@ type JourneyStep = {
 const defaultOptions: RevelioOptions = {
   placement: 'bottom',
   preventScrollIntoView: false,
+  stackingContextAncestors: undefined,
   disableBlink: false,
   persistBlink: false,
   disableClick: false,
@@ -242,6 +259,9 @@ const defaultOptions: RevelioOptions = {
   showDoneBtn: true,
   overlayColor: 'rgba(0, 0, 0, 0.78)',
 };
+
+const zIndexValue = '10000';
+const zIndexOverlayValue = '9999';
 
 export class Revelio {
   private static _started: boolean;
@@ -269,6 +289,13 @@ export class Revelio {
   private _placement: RevelioOptions['placement'] = defaultOptions.placement;
   private _preventScrollIntoView: RevelioOptions['preventScrollIntoView'] =
     defaultOptions.preventScrollIntoView;
+  private _stackingContextAncestors?: {
+    element: string | HTMLElement;
+    originalStyles?: CSSStyleDeclaration;
+  }[] = defaultOptions.stackingContextAncestors?.map((element) => ({
+    element: element,
+    originalStyles: undefined,
+  }));
   private _disableBlink: RevelioOptions['disableBlink'] =
     defaultOptions.disableBlink;
   private _persistBlink: RevelioOptions['persistBlink'] =
@@ -398,7 +425,7 @@ export class Revelio {
     callbacks?.onGoToStepAfter?.bind(this)();
   }
 
-  private async _getStepElement(
+  private async _getElement(
     element: string | HTMLElement,
   ): Promise<HTMLElement> {
     let e: HTMLElement | null = null;
@@ -428,6 +455,15 @@ export class Revelio {
     this._preventScrollIntoView =
       stepOptions?.preventScrollIntoView ??
       this._baseConfig.preventScrollIntoView;
+    const stackingContextAncestors =
+      stepOptions?.stackingContextAncestors ??
+      this._baseConfig.stackingContextAncestors;
+    this._stackingContextAncestors = stackingContextAncestors?.map(
+      (element) => ({
+        element: element,
+        originalStyles: undefined,
+      }),
+    );
     this._disableBlink =
       stepOptions?.disableBlink ?? this._baseConfig.disableBlink;
     this._persistBlink =
@@ -506,16 +542,19 @@ export class Revelio {
   }
 
   public async skipTour() {
+    if (this._transitionBlocked) {
+      return;
+    }
     const continueFlow = this._onSkipBefore?.();
     if (continueFlow === false) {
       return;
     }
 
-    this._keyDownHandlerBlocked = true;
+    this._transitionBlocked = true;
 
     await this.end();
 
-    this._keyDownHandlerBlocked = false;
+    this._transitionBlocked = false;
   }
 
   /**
@@ -529,7 +568,7 @@ export class Revelio {
     overlay.style.width = '100%';
     overlay.style.height = '100%';
     overlay.style.backgroundColor = this._baseConfig.overlayColor;
-    overlay.style.zIndex = '9999';
+    overlay.style.zIndex = zIndexOverlayValue;
     overlay.id = 'revelio-overlay';
 
     overlay.onclick = this.skipTour.bind(this);
@@ -691,7 +730,7 @@ export class Revelio {
     dialog.id = 'revelio-dialog';
     // required styles
     dialog.style.position = 'absolute';
-    dialog.style.zIndex = '10000';
+    dialog.style.zIndex = zIndexValue;
     // Set CSS to make it invisible until we have the correct position
     dialog.style.visibility = 'hidden';
 
@@ -855,7 +894,7 @@ export class Revelio {
     blinkOverlay.style.opacity = '0.0';
     blinkOverlay.style.boxShadow =
       '0 0 5px white, 0 0 25px white, 0 0 50px white, 0 0 100px';
-    blinkOverlay.style.zIndex = '10000';
+    blinkOverlay.style.zIndex = zIndexValue;
     blinkOverlay.style.pointerEvents = 'none';
     blinkOverlay.style.borderRadius =
       window.getComputedStyle(element).borderRadius;
@@ -883,9 +922,50 @@ export class Revelio {
     );
   }
 
+  private async _createStackedContextsOverlays() {
+    if (this._stackingContextAncestors) {
+      await Promise.all(
+        this._stackingContextAncestors.map(async (ancestor, idx) => {
+          // get the stacking context ancestors elements
+          const stackingContextAncestorElement = await this._getElement(
+            ancestor.element,
+          );
+
+          ancestor.originalStyles = { ...stackingContextAncestorElement.style };
+
+          stackingContextAncestorElement.style.zIndex = zIndexValue;
+
+          const elementComputedStyle = window.getComputedStyle(
+            stackingContextAncestorElement,
+          );
+          if (elementComputedStyle.position === 'static') {
+            stackingContextAncestorElement.style.position = 'relative';
+          }
+
+          // add overlay inside the stacking context ancestor
+          const overlay = document.createElement('div');
+          overlay.id = `revelio-ancestor-overlay-${idx}`;
+          overlay.style.position = 'absolute';
+          overlay.style.top = '0';
+          overlay.style.left = '0';
+          overlay.style.width = '100%';
+          overlay.style.height = '100%';
+          if (elementComputedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+            overlay.style.backgroundColor = this._baseConfig.overlayColor;
+          }
+          overlay.style.zIndex = zIndexOverlayValue;
+          overlay.style.pointerEvents = 'none';
+          stackingContextAncestorElement.appendChild(overlay);
+        }),
+      );
+    }
+  }
+
   private async _highlightStepElement(element: HTMLElement) {
+    await this._createStackedContextsOverlays();
+
     const elementComputedStyle = window.getComputedStyle(element);
-    element.style.zIndex = '10000';
+    element.style.zIndex = zIndexValue;
     if (elementComputedStyle.position === 'static') {
       element.style.position = 'relative';
     }
@@ -943,7 +1023,8 @@ export class Revelio {
         this._renderStepDialog(step);
         return resolve();
       }
-      const stepElement = await this._getStepElement(step.element);
+
+      const stepElement = await this._getElement(step.element);
 
       // flag to not resolve if scroll event is triggered
       let scrollTriggered = false;
@@ -956,7 +1037,7 @@ export class Revelio {
           this._placement = 'center';
           return this._renderStepDialog(step);
         }
-        const stepElement = await this._getStepElement(step.element);
+        const stepElement = await this._getElement(step.element);
 
         const scrollEndHandler = async () => {
           const { position, dimensions } =
@@ -1010,13 +1091,9 @@ export class Revelio {
     });
   }
 
-  _keyDownHandlerBlocked = false;
+  _transitionBlocked = false;
 
   private _handleKeyDown = async (event: KeyboardEvent) => {
-    if (this._keyDownHandlerBlocked) {
-      return;
-    }
-
     switch (event.key) {
       case 'ArrowRight':
         if (this._requireClickToGoNext) {
@@ -1044,6 +1121,7 @@ export class Revelio {
       return;
     }
 
+    this._transitionBlocked = true;
     document.addEventListener('keydown', this._handleKeyDown);
 
     Revelio._started = true;
@@ -1054,6 +1132,8 @@ export class Revelio {
 
     await this._mountStep();
 
+    this._transitionBlocked = false;
+
     this._onStartAfter?.();
   }
 
@@ -1063,7 +1143,7 @@ export class Revelio {
       return;
     }
 
-    this._keyDownHandlerBlocked = true;
+    this._transitionBlocked = true;
 
     const overlay = this._rootElement.querySelector('#revelio-overlay');
     if (overlay) {
@@ -1081,7 +1161,7 @@ export class Revelio {
 
     document.removeEventListener('keydown', this._handleKeyDown);
     Revelio._started = false;
-    this._keyDownHandlerBlocked = false;
+    this._transitionBlocked = false;
 
     this._onEndAfter?.();
   }
@@ -1103,13 +1183,41 @@ export class Revelio {
     }
   }
 
+  private async _removeStackingContextAncestorsOverlays() {
+    if (this._stackingContextAncestors) {
+      await Promise.all(
+        this._stackingContextAncestors.map(async (ancestor, idx) => {
+          const stackingContextAncestorElement = await this._getElement(
+            ancestor.element,
+          );
+          stackingContextAncestorElement.style.zIndex =
+            ancestor.originalStyles?.zIndex ?? '';
+          stackingContextAncestorElement.style.position =
+            ancestor.originalStyles?.position ?? '';
+          if (!stackingContextAncestorElement.getAttribute('style')?.trim()) {
+            stackingContextAncestorElement.removeAttribute('style');
+          }
+
+          // remove overlay inside the stacking context ancestor
+          const overlay = document.querySelector(
+            `#revelio-ancestor-overlay-${idx}`,
+          );
+
+          if (overlay) {
+            stackingContextAncestorElement.removeChild(overlay);
+          }
+        }),
+      );
+    }
+  }
+
   private async _unmountStep() {
     const step = this._getCurrentStep();
 
     this._unmountDialog();
 
     if (step.element !== undefined) {
-      const element = await this._getStepElement(step.element);
+      const element = await this._getElement(step.element);
 
       element.style.zIndex = '';
       element.style.position = '';
@@ -1124,6 +1232,8 @@ export class Revelio {
 
       this._unmountBlinkOverlay();
     }
+
+    await this._removeStackingContextAncestorsOverlays();
 
     // remove scroll listener if any
     window.removeEventListener('scroll', this._scrollStartHandler, {
@@ -1160,6 +1270,9 @@ export class Revelio {
   }
 
   public async nextStep() {
+    if (this._transitionBlocked) {
+      return;
+    }
     const continueFlow = this._onNextBefore?.();
     if (continueFlow === false) {
       return;
@@ -1181,7 +1294,7 @@ export class Revelio {
     if (this._currentIndex === this._journey.length - 1) {
     }
 
-    this._keyDownHandlerBlocked = true;
+    this._transitionBlocked = true;
 
     await this._unmountStep();
 
@@ -1191,14 +1304,17 @@ export class Revelio {
     this._setStepProps();
     await this._mountStep();
 
-    this._onNextAfter?.();
+    this._transitionBlocked = false;
 
-    this._keyDownHandlerBlocked = false;
+    this._onNextAfter?.();
   }
 
   private _boundNextStep = this.nextStep.bind(this);
 
   public async prevStep() {
+    if (this._transitionBlocked) {
+      return;
+    }
     const continueFlow = this._onPrevBefore?.();
     if (continueFlow === false) {
       return;
@@ -1209,7 +1325,7 @@ export class Revelio {
       return;
     }
 
-    this._keyDownHandlerBlocked = true;
+    this._transitionBlocked = true;
 
     await this._unmountStep();
 
@@ -1219,9 +1335,9 @@ export class Revelio {
     this._setStepProps();
     await this._mountStep();
 
-    this._onPrevAfter?.();
+    this._transitionBlocked = false;
 
-    this._keyDownHandlerBlocked = false;
+    this._onPrevAfter?.();
   }
 }
 

@@ -11,6 +11,12 @@ type RevelioSharedConfig = {
      */
     preventScrollIntoView: boolean;
     /**
+     * The stacking context ancestors of the element, if any. This is useful when the element is inside a stacking context.
+     * This ensures that all the ancestors are placed above the overlay so the element is properly highlighted.
+     * TODO: explain this better in docs
+     */
+    stackingContextAncestors?: (string | HTMLElement)[];
+    /**
      * If true, disables blinking the element for the current step.
      */
     disableBlink: boolean;
@@ -167,8 +173,17 @@ type RevelioOptions = RevelioSharedConfig & {
  * Journey passed to the Revelio constructor
  */
 type JourneyStep = {
+    /**
+     * The element to highlight. Can be a query selector or an HTMLElement.
+     */
     element?: string | HTMLElement;
+    /**
+     * The title of the step.
+     */
     title: string;
+    /**
+     * The content of the step. A string that supports HTML.
+     */
     content: string;
     /**
      * The options for the step. These will override the global options.
@@ -199,6 +214,7 @@ export declare class Revelio {
     private _currentIndex;
     private _placement;
     private _preventScrollIntoView;
+    private _stackingContextAncestors?;
     private _disableBlink;
     private _persistBlink;
     private _disableClick;
@@ -260,7 +276,7 @@ export declare class Revelio {
         onGoToStepAfterUnmountStep?: (this: Revelio) => void;
         onGoToStepAfter?: (this: Revelio) => void;
     }): Promise<void>;
-    private _getStepElement;
+    private _getElement;
     private _setStepProps;
     skipTour(): Promise<void>;
     /**
@@ -277,6 +293,7 @@ export declare class Revelio {
     private _createButtonsContainer;
     private _renderStepDialog;
     private _createBlinkOverlay;
+    private _createStackedContextsOverlays;
     private _highlightStepElement;
     /**
      * Returns the current step
@@ -287,12 +304,13 @@ export declare class Revelio {
      * Overlay that covers the element for the current step
      */
     private _mountStep;
-    _keyDownHandlerBlocked: boolean;
+    _transitionBlocked: boolean;
     private _handleKeyDown;
     start(): Promise<void>;
     end(): Promise<void>;
     private _unmountDialog;
     private _unmountBlinkOverlay;
+    private _removeStackingContextAncestorsOverlays;
     private _unmountStep;
     /**
      *

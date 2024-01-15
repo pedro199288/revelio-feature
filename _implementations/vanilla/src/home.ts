@@ -57,6 +57,17 @@ const tour = new Revelio({
       element: '#get-started-features-button',
     },
     {
+      title: 'Inside stacking context',
+      content: 'This is inside a stacking context',
+      element: '#btn-inside-stacking-context',
+      options: {
+        stackingContextAncestors: [
+          '#stacking-context-section',
+          '#stacking-context-div',
+        ],
+      },
+    },
+    {
       title: 'The end',
       content: 'This is the end of the tour, enjoy working with this app',
     },
