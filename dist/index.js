@@ -490,7 +490,7 @@ class Revelio {
           overlay.style.backgroundColor = this._baseConfig.overlayColor;
         }
         overlay.style.zIndex = zIndexOverlayValue;
-        overlay.style.pointerEvents = "none";
+        overlay.onclick = this.skipTour.bind(this);
         stackingContextAncestorElement.appendChild(overlay);
       }));
     }
