@@ -5,6 +5,8 @@ import { arrayFromString, getNumberFromString } from '../utils';
  * Config that is shared between the 'options' and 'journey.[].options' properties
  */
 type RevelioSharedConfig = {
+  rootElement: string | HTMLElement;
+
   /**
    * The placement of the feature tour step. Can be 'top', 'bottom', 'left', 'right' or 'center'.
    */
@@ -233,6 +235,7 @@ type JourneyStep = {
 };
 
 const defaultOptions: RevelioOptions = {
+  rootElement: document.body,
   placement: 'bottom',
   preventScrollIntoView: false,
   stackingContextAncestors: undefined,
@@ -272,7 +275,7 @@ export class Revelio {
   /**
    * The root element for the Revelio instance
    */
-  private _rootElement: HTMLElement;
+  private _rootElement: HTMLElement = document.body;
   /**
    * The feature tour for the Revelio instance
    */
@@ -372,9 +375,6 @@ export class Revelio {
     this._journey = journey ?? [];
     this._initialJourney = [...journey];
     this._currentIndex = 0;
-    this._setStepProps();
-
-    this._rootElement = document.body;
   }
 
   get currentIndex() {
@@ -419,7 +419,7 @@ export class Revelio {
     callbacks?.onGoToStepAfterUnmountStep?.bind(this)();
 
     this._currentIndex = index;
-    this._setStepProps();
+    await this._setStepProps();
     await this._mountStep();
 
     callbacks?.onGoToStepAfter?.bind(this)();
@@ -449,8 +449,12 @@ export class Revelio {
     return e;
   }
 
-  private _setStepProps() {
+  private async _setStepProps() {
     const stepOptions = this._journey[this._currentIndex]?.options;
+    const rootElement = await this._getElement(
+      stepOptions?.rootElement ?? this._baseConfig.rootElement,
+    );
+    this._rootElement = rootElement;
     this._placement = stepOptions?.placement ?? this._baseConfig.placement;
     this._preventScrollIntoView =
       stepOptions?.preventScrollIntoView ??
@@ -574,6 +578,7 @@ export class Revelio {
     overlay.onclick = this.skipTour.bind(this);
 
     this._rootElement.appendChild(overlay);
+    return overlay;
   }
 
   private _getPlacementArray(
@@ -851,7 +856,23 @@ export class Revelio {
     return buttonsContainer;
   }
 
-  private _renderStepDialog(
+  private async _createOrMoveRootOverlay() {
+    let currentRootOverlay = document.querySelector('#revelio-overlay');
+
+    if (currentRootOverlay) {
+      this._rootElement.appendChild(currentRootOverlay);
+    } else {
+      currentRootOverlay = this._renderOverlay();
+    }
+
+    currentRootOverlay ??= document.querySelector('#revelio-overlay');
+
+    if (!currentRootOverlay) {
+      this._renderOverlay();
+    }
+  }
+
+  private async _renderStepDialog(
     step: JourneyStep,
     elementPosition?: { top: number; left: number },
     elementDimensions?: { width: number; height: number },
@@ -870,6 +891,8 @@ export class Revelio {
     const buttonsContainer = this._createButtonsContainer();
 
     dialog.appendChild(buttonsContainer);
+
+    await this._createOrMoveRootOverlay();
 
     this._rootElement.appendChild(dialog);
 
@@ -899,7 +922,6 @@ export class Revelio {
     blinkOverlay.style.borderRadius =
       window.getComputedStyle(element).borderRadius;
     blinkOverlay.id = 'revelio-blink-overlay';
-
     this._rootElement.appendChild(blinkOverlay);
 
     blinkOverlay.animate(
@@ -1000,10 +1022,10 @@ export class Revelio {
   }
 
   /**
-   * Returns the current step
+   * Returns the step for the given index, or the current step if no index is provided
    */
-  private _getCurrentStep() {
-    const step = this._journey[this._currentIndex];
+  private _getStep(index: number = this._currentIndex) {
+    const step = this._journey[index];
     if (!step) {
       throw new Error(`Step ${this._currentIndex} not found`);
     }
@@ -1017,10 +1039,10 @@ export class Revelio {
    */
   private async _mountStep() {
     return new Promise<void>(async (resolve) => {
-      const step = this._getCurrentStep();
+      const step = this._getStep();
       if (step.element === undefined) {
         this._placement = 'center';
-        this._renderStepDialog(step);
+        await this._renderStepDialog(step);
         return resolve();
       }
 
@@ -1032,10 +1054,11 @@ export class Revelio {
 
       const scrollStartHandler = async () => {
         scrollTriggered = true;
-        const step = this._getCurrentStep();
+        const step = this._getStep();
         if (step.element === undefined) {
           this._placement = 'center';
-          return this._renderStepDialog(step);
+          await this._renderStepDialog(step);
+          return;
         }
         const stepElement = await this._getElement(step.element);
 
@@ -1043,7 +1066,7 @@ export class Revelio {
           const { position, dimensions } =
             await this._highlightStepElement(stepElement);
 
-          this._renderStepDialog(step, position, dimensions);
+          await this._renderStepDialog(step, position, dimensions);
 
           resolved = true;
           resolve();
@@ -1126,9 +1149,8 @@ export class Revelio {
 
     Revelio._started = true;
     this._currentIndex = 0;
-    this._setStepProps();
 
-    this._renderOverlay();
+    await this._setStepProps();
 
     await this._mountStep();
 
@@ -1212,7 +1234,7 @@ export class Revelio {
   }
 
   private async _unmountStep() {
-    const step = this._getCurrentStep();
+    const step = this._getStep();
 
     this._unmountDialog();
 
@@ -1291,9 +1313,6 @@ export class Revelio {
       return;
     }
 
-    if (this._currentIndex === this._journey.length - 1) {
-    }
-
     this._transitionBlocked = true;
 
     await this._unmountStep();
@@ -1301,7 +1320,7 @@ export class Revelio {
     this._onNextAfterUnmountStep?.();
 
     this._currentIndex += 1;
-    this._setStepProps();
+    await this._setStepProps();
     await this._mountStep();
 
     this._transitionBlocked = false;
@@ -1332,7 +1351,7 @@ export class Revelio {
     this._onPrevAfterUnmountStep?.();
 
     this._currentIndex -= 1;
-    this._setStepProps();
+    await this._setStepProps();
     await this._mountStep();
 
     this._transitionBlocked = false;
