@@ -179,6 +179,20 @@
               </div>
             </div>
           </section>
+          <section
+            id="stacking-context-section"
+            class="w-full py-12 md:py-24 lg:py-32 bg-green-500 transform"
+          >
+            <div id="stacking-context-div" class="transform">
+              <button
+                id="btn-inside-stacking-context"
+                onclick="console.log('clicked')"
+                class="py-2 px-4 bg-red-500 text-white"
+              >
+                Click me
+              </button>
+            </div>
+          </section>
         </main>
         <footer
           class="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t"
