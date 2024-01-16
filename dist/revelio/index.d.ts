@@ -262,6 +262,7 @@ export declare class Revelio {
     });
     get currentIndex(): number;
     get journey(): JourneyStep[];
+    private _createError;
     /**
      * Set the journey to the initial journey, useful when some steps have been added or removed
      * and want to reset the journey to the initial state

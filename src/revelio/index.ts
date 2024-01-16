@@ -391,6 +391,17 @@ export class Revelio {
     return this._journey;
   }
 
+  private _createError(error: string) {
+    if (Revelio._started === true) {
+      // flag to avoid bucle calls to this.end() (as it might throw an error in its execution)
+      this._transitionBlocked = false;
+      Revelio._started = false;
+      this.end();
+      this.resetJourney();
+    }
+    return new Error(error);
+  }
+
   /**
    * Set the journey to the initial journey, useful when some steps have been added or removed
    * and want to reset the journey to the initial state
@@ -449,9 +460,12 @@ export class Revelio {
     } else {
       e = element;
     }
-    if (!e) throw new Error(`Element ${element} not found`);
-    if (!(e instanceof HTMLElement))
-      throw new Error(`Element ${element} is not an HTMLElement`);
+    if (!e) {
+      throw this._createError(`Element ${element} not found`);
+    }
+    if (!(e instanceof HTMLElement)) {
+      throw this._createError(`Element ${element} is not an HTMLElement`);
+    }
     return e;
   }
 
@@ -621,14 +635,16 @@ export class Revelio {
     const rootElementWidth = rootElementRect.width;
     const rootElementHeight = rootElementRect.height;
 
-    function getDialogPosition(placementArray: RevelioOptions['placement'][]) {
+    const getDialogPosition = (
+      placementArray: RevelioOptions['placement'][],
+    ): { dialogLeft: number; dialogTop: number } => {
       let dialogLeft: number = 0,
         dialogTop: number = 0;
 
       const currentPlacement = placementArray.shift();
 
       if (!currentPlacement) {
-        throw new Error('No placement specified');
+        throw this._createError('No placement specified');
       }
 
       if (currentPlacement === 'center') {
@@ -636,7 +652,9 @@ export class Revelio {
         dialogTop = rootElementHeight / 2 - dialogSpaceHeight / 2;
       } else {
         if (!elementPosition || !elementDimensions) {
-          throw new Error('No element position or dimensions specified');
+          throw this._createError(
+            'No element position or dimensions specified',
+          );
         }
 
         const elementXCenter =
@@ -705,7 +723,7 @@ export class Revelio {
         dialogLeft,
         dialogTop,
       };
-    }
+    };
 
     const placementArray = this._getPlacementArray(this._placement);
 
@@ -835,7 +853,9 @@ export class Revelio {
 
     if (this._showNextBtn) {
       const nextBtn = this._createButton(this._nextBtnText, async () => {
-        await this.nextStep();
+        if (!this._requireClickToGoNext) {
+          await this.nextStep();
+        }
       });
       nextBtnContainer.appendChild(nextBtn);
     }
@@ -1077,7 +1097,7 @@ export class Revelio {
   private _getStep(index: number = this._currentIndex) {
     const step = this._journey[index];
     if (!step) {
-      throw new Error(`Step ${this._currentIndex} not found`);
+      throw this._createError(`Step ${index} not found`);
     }
     return step;
   }
@@ -1225,9 +1245,7 @@ export class Revelio {
     try {
       await this._unmountStep();
       this._onEndAfterUnmountStep?.();
-    } catch (e) {
-      console.error(e); // log the error but continue to end the instance
-    }
+    } catch (e) {} // to continue the execution even if there is an error
 
     this._currentIndex = 0;
 
@@ -1319,6 +1337,9 @@ export class Revelio {
 
       element.style.zIndex = '';
       element.style.position = '';
+      if (this._disableClick) {
+        element.style.pointerEvents = '';
+      }
 
       if (!element.getAttribute('style')?.trim()) {
         element.removeAttribute('style');
@@ -1327,7 +1348,6 @@ export class Revelio {
       if (this._goNextOnClick) {
         element.removeEventListener('click', this._boundNextStep);
       }
-
       this._unmountBlinkOverlay();
     }
 

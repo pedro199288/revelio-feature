@@ -115,6 +115,15 @@ class Revelio {
   get journey() {
     return this._journey;
   }
+  _createError(error) {
+    if (Revelio._started === true) {
+      this._transitionBlocked = false;
+      Revelio._started = false;
+      this.end();
+      this.resetJourney();
+    }
+    return new Error(error);
+  }
   resetJourney() {
     this._journey = [...this._initialJourney];
   }
@@ -150,10 +159,12 @@ class Revelio {
     } else {
       e = element;
     }
-    if (!e)
-      throw new Error(`Element ${element} not found`);
-    if (!(e instanceof HTMLElement))
-      throw new Error(`Element ${element} is not an HTMLElement`);
+    if (!e) {
+      throw this._createError(`Element ${element} not found`);
+    }
+    if (!(e instanceof HTMLElement)) {
+      throw this._createError(`Element ${element} is not an HTMLElement`);
+    }
     return e;
   }
   async _setStepProps() {
@@ -252,18 +263,18 @@ class Revelio {
     const rootElementRect = this._rootElement.getBoundingClientRect();
     const rootElementWidth = rootElementRect.width;
     const rootElementHeight = rootElementRect.height;
-    function getDialogPosition(placementArray2) {
+    const getDialogPosition = (placementArray2) => {
       let dialogLeft2 = 0, dialogTop2 = 0;
       const currentPlacement = placementArray2.shift();
       if (!currentPlacement) {
-        throw new Error("No placement specified");
+        throw this._createError("No placement specified");
       }
       if (currentPlacement === "center") {
         dialogLeft2 = rootElementWidth / 2 - dialogSpaceWidth / 2;
         dialogTop2 = rootElementHeight / 2 - dialogSpaceHeight / 2;
       } else {
         if (!elementPosition || !elementDimensions) {
-          throw new Error("No element position or dimensions specified");
+          throw this._createError("No element position or dimensions specified");
         }
         const elementXCenter = elementPosition.left + elementDimensions.width / 2;
         const elementYCenter = elementPosition.top + elementDimensions.height / 2;
@@ -311,7 +322,7 @@ class Revelio {
         dialogLeft: dialogLeft2,
         dialogTop: dialogTop2
       };
-    }
+    };
     const placementArray = this._getPlacementArray(this._placement);
     const { dialogLeft, dialogTop } = getDialogPosition(placementArray);
     dialog.style.top = `clamp(0px, ${dialogTop}px, ${rootElementHeight - dialogSpaceHeight}px)`;
@@ -417,7 +428,9 @@ class Revelio {
     }
     if (this._showNextBtn) {
       const nextBtn = this._createButton(this._nextBtnText, async () => {
-        await this.nextStep();
+        if (!this._requireClickToGoNext) {
+          await this.nextStep();
+        }
       });
       nextBtnContainer.appendChild(nextBtn);
     }
@@ -587,7 +600,7 @@ class Revelio {
   _getStep(index = this._currentIndex) {
     const step = this._journey[index];
     if (!step) {
-      throw new Error(`Step ${this._currentIndex} not found`);
+      throw this._createError(`Step ${index} not found`);
     }
     return step;
   }
@@ -700,7 +713,6 @@ class Revelio {
       await this._unmountStep();
       this._onEndAfterUnmountStep?.();
     } catch (e) {
-      console.error(e);
     }
     this._currentIndex = 0;
     document.removeEventListener("keydown", this._handleKeyDown);
@@ -758,6 +770,9 @@ class Revelio {
       const element = await this._getElement(step.element);
       element.style.zIndex = "";
       element.style.position = "";
+      if (this._disableClick) {
+        element.style.pointerEvents = "";
+      }
       if (!element.getAttribute("style")?.trim()) {
         element.removeAttribute("style");
       }
