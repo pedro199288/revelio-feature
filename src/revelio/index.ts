@@ -1319,6 +1319,9 @@ export class Revelio {
 
       element.style.zIndex = '';
       element.style.position = '';
+      if (this._disableClick) {
+        element.style.pointerEvents = '';
+      }
 
       if (!element.getAttribute('style')?.trim()) {
         element.removeAttribute('style');
@@ -1327,7 +1330,6 @@ export class Revelio {
       if (this._goNextOnClick) {
         element.removeEventListener('click', this._boundNextStep);
       }
-
       this._unmountBlinkOverlay();
     }
 

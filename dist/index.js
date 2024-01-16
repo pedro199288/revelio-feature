@@ -758,6 +758,9 @@ class Revelio {
       const element = await this._getElement(step.element);
       element.style.zIndex = "";
       element.style.position = "";
+      if (this._disableClick) {
+        element.style.pointerEvents = "";
+      }
       if (!element.getAttribute("style")?.trim()) {
         element.removeAttribute("style");
       }
