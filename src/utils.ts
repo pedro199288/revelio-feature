@@ -6,4 +6,18 @@ function getNumberFromString(string: string) {
   return Number(string.replace(/[^0-9]/g, ''));
 }
 
-export { arrayFromString, getNumberFromString };
+function getBgAlphaFromElement(element: Element) {
+  const backgroundColor = window.getComputedStyle(element).backgroundColor;
+  if (backgroundColor.startsWith('rgba')) {
+    return parseFloat(
+      backgroundColor.slice(backgroundColor.lastIndexOf(',') + 1, -1),
+    );
+  } else if (backgroundColor.startsWith('rgb')) {
+    return 1;
+  } else {
+    console.warn('Unsupported color format:', backgroundColor);
+    return undefined;
+  }
+}
+
+export { arrayFromString, getNumberFromString, getBgAlphaFromElement };
