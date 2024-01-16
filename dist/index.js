@@ -417,7 +417,9 @@ class Revelio {
     }
     if (this._showNextBtn) {
       const nextBtn = this._createButton(this._nextBtnText, async () => {
-        await this.nextStep();
+        if (!this._requireClickToGoNext) {
+          await this.nextStep();
+        }
       });
       nextBtnContainer.appendChild(nextBtn);
     }
