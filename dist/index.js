@@ -5,6 +5,17 @@ var arrayFromString = function(classString) {
 var getNumberFromString = function(string) {
   return Number(string.replace(/[^0-9]/g, ""));
 };
+var getBgAlphaFromElement = function(element) {
+  const backgroundColor = window.getComputedStyle(element).backgroundColor;
+  if (backgroundColor.startsWith("rgba")) {
+    return parseFloat(backgroundColor.slice(backgroundColor.lastIndexOf(",") + 1, -1));
+  } else if (backgroundColor.startsWith("rgb")) {
+    return 1;
+  } else {
+    console.warn("Unsupported color format:", backgroundColor);
+    return;
+  }
+};
 
 // src/revelio/index.ts
 var defaultOptions = {
@@ -37,6 +48,7 @@ var defaultOptions = {
 };
 var zIndexValue = "10000";
 var zIndexOverlayValue = "9999";
+var revelioElementAncestorWithOpacityClass = "revelio-element-ancestor-with-opacity";
 
 class Revelio {
   static _started;
@@ -484,14 +496,42 @@ class Revelio {
       easing: "ease-in"
     });
   }
-  async _createStackedContextsOverlays() {
+  async _createStackedContextsOverlays(highlightedElement) {
     if (this._stackingContextAncestors) {
+      let setOpacityToSiblingsWithoutHighlightedElement = function(ancestorElement) {
+        const children = ancestorElement.children;
+        for (let i = 0;i < children.length; i++) {
+          const child = children[i];
+          if (child instanceof HTMLElement && child !== highlightedElement) {
+            if (!child.contains(highlightedElement)) {
+              child.classList.add(revelioElementAncestorWithOpacityClass);
+            }
+            setOpacityToSiblingsWithoutHighlightedElement(child);
+          }
+        }
+      };
+      if (!document.querySelector("#revelio-ancestor-overlay-style")) {
+        const currentRootOverlay = document.querySelector("#revelio-overlay");
+        let opacity = 50;
+        if (currentRootOverlay) {
+          const alpha = getBgAlphaFromElement(currentRootOverlay) ?? 0.5;
+          const invertedAlpha = Math.abs(1 - alpha);
+          opacity = invertedAlpha * 100;
+        } else {
+          opacity = 30;
+        }
+        const style = document.createElement("style");
+        style.setAttribute("type", "text/css");
+        style.id = "revelio-ancestor-overlay-style";
+        style.innerHTML = `.${revelioElementAncestorWithOpacityClass} { opacity: ${opacity}% !important; }`;
+        document.head.appendChild(style);
+      }
       await Promise.all(this._stackingContextAncestors.map(async (ancestor, idx) => {
         const stackingContextAncestorElement = await this._getElement(ancestor.element);
         ancestor.originalStyles = { ...stackingContextAncestorElement.style };
         stackingContextAncestorElement.style.zIndex = zIndexValue;
-        const elementComputedStyle = window.getComputedStyle(stackingContextAncestorElement);
-        if (elementComputedStyle.position === "static") {
+        const ancestorElementComputedStyle = window.getComputedStyle(stackingContextAncestorElement);
+        if (ancestorElementComputedStyle.position === "static") {
           stackingContextAncestorElement.style.position = "relative";
         }
         const overlay = document.createElement("div");
@@ -501,8 +541,10 @@ class Revelio {
         overlay.style.left = "0";
         overlay.style.width = "100%";
         overlay.style.height = "100%";
-        if (elementComputedStyle.backgroundColor !== "rgba(0, 0, 0, 0)") {
+        if (ancestorElementComputedStyle.backgroundColor !== "rgba(0, 0, 0, 0)") {
           overlay.style.backgroundColor = this._baseConfig.overlayColor;
+        } else {
+          setOpacityToSiblingsWithoutHighlightedElement(stackingContextAncestorElement);
         }
         overlay.style.zIndex = zIndexOverlayValue;
         overlay.onclick = this.skipTour.bind(this);
@@ -511,7 +553,7 @@ class Revelio {
     }
   }
   async _highlightStepElement(element) {
-    await this._createStackedContextsOverlays();
+    await this._createStackedContextsOverlays(element);
     const elementComputedStyle = window.getComputedStyle(element);
     element.style.zIndex = zIndexValue;
     if (elementComputedStyle.position === "static") {
@@ -680,8 +722,23 @@ class Revelio {
   }
   async _removeStackingContextAncestorsOverlays() {
     if (this._stackingContextAncestors) {
+      let removeOpacityFromSiblingsWithoutHighlightedElement = function(ancestorElement) {
+        const children = ancestorElement.children;
+        for (let i = 0;i < children.length; i++) {
+          const child = children[i];
+          if (child instanceof HTMLElement) {
+            child.classList.remove(revelioElementAncestorWithOpacityClass);
+            removeOpacityFromSiblingsWithoutHighlightedElement(child);
+          }
+        }
+      };
       await Promise.all(this._stackingContextAncestors.map(async (ancestor, idx) => {
         const stackingContextAncestorElement = await this._getElement(ancestor.element);
+        const ancestorElementComputedStyle = window.getComputedStyle(stackingContextAncestorElement);
+        if (ancestorElementComputedStyle.backgroundColor === "rgba(0, 0, 0, 0)") {
+          removeOpacityFromSiblingsWithoutHighlightedElement(stackingContextAncestorElement);
+          document.head.querySelector("#revelio-ancestor-overlay-style")?.remove();
+        }
         stackingContextAncestorElement.style.zIndex = ancestor.originalStyles?.zIndex ?? "";
         stackingContextAncestorElement.style.position = ancestor.originalStyles?.position ?? "";
         if (!stackingContextAncestorElement.getAttribute("style")?.trim()) {

@@ -1,5 +1,9 @@
 /* eslint-disable no-use-before-define */
-import { arrayFromString, getNumberFromString } from '../utils';
+import {
+  arrayFromString,
+  getBgAlphaFromElement,
+  getNumberFromString,
+} from '../utils';
 
 /**
  * Config that is shared between the 'options' and 'journey.[].options' properties
@@ -265,6 +269,8 @@ const defaultOptions: RevelioOptions = {
 
 const zIndexValue = '10000';
 const zIndexOverlayValue = '9999';
+const revelioElementAncestorWithOpacityClass =
+  'revelio-element-ancestor-with-opacity';
 
 export class Revelio {
   private static _started: boolean;
@@ -944,8 +950,45 @@ export class Revelio {
     );
   }
 
-  private async _createStackedContextsOverlays() {
+  private async _createStackedContextsOverlays(
+    highlightedElement: HTMLElement,
+  ) {
     if (this._stackingContextAncestors) {
+      // Get the alpha value of the current overlay
+      if (!document.querySelector('#revelio-ancestor-overlay-style')) {
+        const currentRootOverlay = document.querySelector('#revelio-overlay');
+        let opacity = 0.5 * 100;
+        if (currentRootOverlay) {
+          const alpha = getBgAlphaFromElement(currentRootOverlay) ?? 0.5;
+          const invertedAlpha = Math.abs(1 - alpha);
+          opacity = invertedAlpha * 100;
+        } else {
+          opacity = 30;
+        }
+
+        const style = document.createElement('style');
+        style.setAttribute('type', 'text/css');
+        style.id = 'revelio-ancestor-overlay-style';
+        style.innerHTML = `.${revelioElementAncestorWithOpacityClass} { opacity: ${opacity}% !important; }`;
+        document.head.appendChild(style);
+      }
+
+      function setOpacityToSiblingsWithoutHighlightedElement(
+        ancestorElement: HTMLElement,
+      ) {
+        // get all the children of the ancestorElement
+        const children = ancestorElement.children;
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i];
+          if (child instanceof HTMLElement && child !== highlightedElement) {
+            if (!child.contains(highlightedElement)) {
+              child.classList.add(revelioElementAncestorWithOpacityClass);
+            }
+            setOpacityToSiblingsWithoutHighlightedElement(child);
+          }
+        }
+      }
+
       await Promise.all(
         this._stackingContextAncestors.map(async (ancestor, idx) => {
           // get the stacking context ancestors elements
@@ -957,10 +1000,10 @@ export class Revelio {
 
           stackingContextAncestorElement.style.zIndex = zIndexValue;
 
-          const elementComputedStyle = window.getComputedStyle(
+          const ancestorElementComputedStyle = window.getComputedStyle(
             stackingContextAncestorElement,
           );
-          if (elementComputedStyle.position === 'static') {
+          if (ancestorElementComputedStyle.position === 'static') {
             stackingContextAncestorElement.style.position = 'relative';
           }
 
@@ -972,8 +1015,15 @@ export class Revelio {
           overlay.style.left = '0';
           overlay.style.width = '100%';
           overlay.style.height = '100%';
-          if (elementComputedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+          if (
+            // this means that the background is not transparent
+            ancestorElementComputedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)'
+          ) {
             overlay.style.backgroundColor = this._baseConfig.overlayColor;
+          } else {
+            setOpacityToSiblingsWithoutHighlightedElement(
+              stackingContextAncestorElement,
+            );
           }
           overlay.style.zIndex = zIndexOverlayValue;
           overlay.onclick = this.skipTour.bind(this);
@@ -984,7 +1034,7 @@ export class Revelio {
   }
 
   private async _highlightStepElement(element: HTMLElement) {
-    await this._createStackedContextsOverlays();
+    await this._createStackedContextsOverlays(element);
 
     const elementComputedStyle = window.getComputedStyle(element);
     element.style.zIndex = zIndexValue;
@@ -1207,11 +1257,37 @@ export class Revelio {
 
   private async _removeStackingContextAncestorsOverlays() {
     if (this._stackingContextAncestors) {
+      function removeOpacityFromSiblingsWithoutHighlightedElement(
+        ancestorElement: HTMLElement,
+      ) {
+        // get all the children of the ancestorElement
+        const children = ancestorElement.children;
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i];
+          if (child instanceof HTMLElement) {
+            child.classList.remove(revelioElementAncestorWithOpacityClass);
+            removeOpacityFromSiblingsWithoutHighlightedElement(child);
+          }
+        }
+      }
       await Promise.all(
         this._stackingContextAncestors.map(async (ancestor, idx) => {
           const stackingContextAncestorElement = await this._getElement(
             ancestor.element,
           );
+          const ancestorElementComputedStyle = window.getComputedStyle(
+            stackingContextAncestorElement,
+          );
+          if (
+            ancestorElementComputedStyle.backgroundColor === 'rgba(0, 0, 0, 0)'
+          ) {
+            removeOpacityFromSiblingsWithoutHighlightedElement(
+              stackingContextAncestorElement,
+            );
+            document.head
+              .querySelector('#revelio-ancestor-overlay-style')
+              ?.remove();
+          }
           stackingContextAncestorElement.style.zIndex =
             ancestor.originalStyles?.zIndex ?? '';
           stackingContextAncestorElement.style.position =
