@@ -7,6 +7,11 @@ export default defineConfig({
   image: {
     service: passthroughImageService(),
   },
+  vite: {
+    css: {
+      postcss: {},
+    },
+  },
   integrations: [
     starlight({
       title: 'Revelio Feature',
