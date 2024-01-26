@@ -9,7 +9,7 @@ export default defineConfig({
   },
   vite: {
     css: {
-      postcss: {},
+      postcss: { plugins: [] },
     },
   },
   integrations: [
