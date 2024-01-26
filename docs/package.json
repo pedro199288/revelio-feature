@@ -12,7 +12,10 @@
   "dependencies": {
     "@astrojs/check": "^0.4.1",
     "@astrojs/starlight": "^0.16.0",
+    "@astrojs/starlight-tailwind": "^2.0.1",
+    "@astrojs/tailwind": "^5.1.0",
     "astro": "latest",
+    "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3"
   }
 }
