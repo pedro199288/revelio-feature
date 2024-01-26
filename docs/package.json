@@ -13,7 +13,6 @@
     "@astrojs/check": "^0.4.1",
     "@astrojs/starlight": "^0.16.0",
     "astro": "latest",
-    "sharp": "^0.33.2",
     "typescript": "^5.3.3"
   }
 }
