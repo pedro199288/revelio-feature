@@ -12,13 +12,13 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Revelio Feature',
-      favicon: './public/favicon.png',
+      favicon: '/favicon.png',
       head: [
         {
           tag: 'link',
           attrs: {
             rel: 'icon',
-            href: './public/favicon.ico',
+            href: '/favicon.ico',
             sizes: '32x32',
           },
         },
