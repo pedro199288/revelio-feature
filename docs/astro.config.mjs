@@ -12,18 +12,18 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Revelio Feature',
-      favicon: './src/assets/revelio-feature-favicon.png',
+      favicon: '/public/favicon.png',
       head: [
         {
           tag: 'link',
           attrs: {
             rel: 'icon',
-            href: './src/assets/revelio-feature-favicon.ico',
+            href: '/public/favicon.ico',
             sizes: '32x32',
           },
         },
       ],
-      logo: { src: './src/assets/revelio-feature-favicon.png' },
+      logo: { src: '/public/favicon.png' },
       social: {
         github: 'https://github.com/pedro199288/revelio-feature',
       },
