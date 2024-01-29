@@ -1,0 +1,95 @@
+---
+title: Enseña como funciona tu app
+description: Enseña a tus usuarios las funciones de su aplicación con un tour interactivo.
+template: splash
+hero:
+  tagline: Aumente el "engagement" de tus usuarios con tours interactivos por las funcionalidades de tu app.
+  image:
+    file: ../../../assets/revelio-image-no-bg.png
+  actions:
+    - text: Inicio rápido
+      link: /guides/quick-start/
+      icon: right-arrow
+      variant: primary
+    - text: Explorar ejemplos
+      link: /examples/first-example
+      icon: magnifier
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## Características
+
+<CardGrid stagger>
+  <Card title="Agnóstico de frameworks" icon="star">
+    Se puede utilizar con cualquier framework o simplemente con JS vainilla.
+  </Card>
+  <Card title="API rica e intuitiva" icon="star">
+    Permite personalizar el recorrido según sus necesidades: métodos de control
+    de flujo, interactividad del usuario, hooks de ciclo de vida, clases CSS
+    personalizadas, etc.
+  </Card>
+  <Card title="Ligero y sin dependencias" icon="star">
+    Revelio feature es una biblioteca ligera sin dependencias, solo pesa 4.8kb
+    comprimida.
+  </Card>
+  <Card title="Typescript" icon="star">
+    Revelio feature tiene soporte para Typescript, lo que permite seguridad de
+    tipado y una mejor experiencia para el desarrollador.
+  </Card>
+  <Card title="Desplazamiento automático a los elementos" icon="star">
+    Se desplaza automáticamente a los elementos, incluso cuando estos elementos
+    están en contenedores con scroll anidados en otros.
+  </Card>
+  <Card title="Soporta anidamiento de contextos de apilamiento" icon="star">
+    Otras alternativas de tour de funcionalidades tiene problemas con [contextos
+    de
+    apilamiento](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_positioned_layout/Understanding_z-index/Stacking_context)
+    anidados, Revelio feature te permite superarlos con su rica API.
+  </Card>
+  <Card title="Gratis y de código abierto" icon="star">
+    Revelio siempre será gratis y de código abierto, estamos abiertos a
+    contribuciones y comentarios!
+  </Card>
+</CardGrid>
+
+## Comenzar
+
+Instale la dependencia y comience a construir el tour de funcionalidades que sus usuarios merecen.
+
+```bash
+npm install revelio-feature
+```
+
+Crea tu primer tour.
+
+```js
+import { Revelio } from 'revelio-feature';
+
+const revelioTour = new Revelio({
+  options: {
+    // ... custom global options
+  },
+  journey: [
+    {
+      title: 'Welcome to my Amazing App!', // title of the step
+      content: 'Click "Next" to get started discovering my app features.', // description of the step
+      element: '#welcome-element', // CSS query selector
+      options: {
+        // ... custom options for this step
+      },
+    },
+    // ... more steps
+  ],
+});
+```
+
+<div class="block justify-center pt-12 ">
+  <LinkCard
+    href="/quick-start"
+    content="Follow the quick start guide for more details"
+    title="Folow the quick start guide for more details"
+  />
+</div>
+
+{/* TODO: projects using Revelio Feature */}

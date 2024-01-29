@@ -1,0 +1,52 @@
+---
+title: Inicio Rápido
+description: Guía de inicio rápido para Revelio Feature
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+export const exampleCode = `console.log('This could come from a file or CMS!');`;
+export const fileName = 'pnpm';
+export const highlights = ['file', 'CMS'];
+
+## Instalación
+
+<Tabs>
+  <TabItem label="npm">
+    <Code code={'npm install revelio-feature'} language="bash" />
+  </TabItem>
+  <TabItem label="pnpm">
+    <Code code={'pnpm install revelio-feature'} language="bash" />
+  </TabItem>
+  <TabItem label="bun">
+    <Code code={'bun add revelio-feature'} language="bash" />
+  </TabItem>
+  <TabItem label="yarn">
+    <Code code={'yarn add revelio-feature'} language="bash" />
+  </TabItem>
+</Tabs>
+
+## Uso
+
+Crea una instancia de `Revelio` y pásale un objeto de configuración con las opciones y el recorrido que deseas que siga el usuario.
+
+```js
+import { Revelio } from 'revelio-feature';
+
+const revelioTour = new Revelio({
+  options: {
+    // ... custom global options
+  },
+  journey: [
+    {
+      title: 'Welcome to my Amazing App!', // title of the step
+      content: 'Click "Next" to get started discovering my app features.', // description of the step
+      element: '#welcome-element', // CSS query selector
+      options: {
+        // ... custom options for this step
+      },
+    },
+    // ... more steps
+  ],
+});
+```

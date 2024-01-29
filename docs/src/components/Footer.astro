@@ -1,0 +1,18 @@
+---
+import type { Props } from '@astrojs/starlight/props';
+import Default from '@astrojs/starlight/components/Footer.astro';
+import { Icon } from '@astrojs/starlight/components';
+
+const twitter = "monjimind"
+---
+
+
+<Default {...Astro.props}>
+  
+  <slot />
+  
+  
+</Default>
+<div class="text-center mt-16">
+  Built with ❤️ by <a target="_blank" href={`https://twitter.com/${twitter}`}>@{twitter} <Icon name="external" /></a> 
+</div>

@@ -7,6 +7,8 @@ export default defineConfig({
   image: {
     service: passthroughImageService(),
   },
+  // for sitemap
+  site: 'https://revelio-feature.monjimind.com/',
   integrations: [
     starlight({
       title: 'Revelio Feature',
@@ -28,21 +30,41 @@ export default defineConfig({
       sidebar: [
         {
           label: 'Guides',
-          items: [
-            // Each item here is one entry in the navigation menu.
-            {
-              label: 'Example Guide',
-              link: '/guides/example/',
-            },
-          ],
+          translations: {
+            es: 'Guías',
+          },
+          autogenerate: {
+            directory: 'guides',
+          },
         },
         {
-          label: 'Reference',
+          label: 'Examples',
+          translations: {
+            es: 'Ejemplos',
+          },
           autogenerate: {
-            directory: 'reference',
+            directory: 'examples',
           },
         },
       ],
+      components: {
+        Footer: './src/components/Footer.astro',
+      },
+      editLink: {
+        baseUrl:
+          'https://github.com/pedro199288/revelio-feature/edit/main/docs/',
+      },
+      defaultLocale: 'root',
+      locales: {
+        root: {
+          lang: 'en',
+          label: 'English',
+        },
+        es: {
+          label: 'Español',
+          lang: 'es',
+        },
+      },
       customCss: ['./src/tailwind.css'],
     }),
     tailwind(),
