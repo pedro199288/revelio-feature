@@ -1,9 +1,5 @@
 /* eslint-disable no-use-before-define */
-import {
-  arrayFromString,
-  getBgAlphaFromElement,
-  getNumberFromString,
-} from '../utils';
+import { arrayFromClassesString, getNumberFromString } from '../utils';
 
 /**
  * Config that is shared between the 'options' and 'journey.[].options' properties
@@ -137,68 +133,68 @@ type RevelioSharedConfig = {
    * Function to call before the feature tour starts.
    * If this method returns false, the regular flow will be interrupted
    */
-  onStartBefore?: (this: Revelio) => void | boolean;
+  onStartBefore?: (this: Revelio) => void | boolean | Promise<void | boolean>;
 
   /**
    * Function to call after the feature tour starts.
    */
-  onStartAfter?: (this: Revelio) => void;
+  onStartAfter?: (this: Revelio) => void | Promise<void>;
 
   /**
    * Function to call when this.end() starts its execution.
    * If this method returns false, the regular flow will be interrupted
    */
-  onEndBefore?: (this: Revelio) => void | boolean;
+  onEndBefore?: (this: Revelio) => void | boolean | Promise<void | boolean>;
 
   /**
    * Function to call after this.end() methods executes this._unmountStep().
    */
-  onEndAfterUnmountStep?: (this: Revelio) => void;
+  onEndAfterUnmountStep?: (this: Revelio) => void | Promise<void>;
 
   /**
    * Function to call when the tour has finished. This can happen  because
    * the user clicked the 'Done' button or becasue the user clicked
    * the 'Skip' button or outside the dialog)
    */
-  onEndAfter?: (this: Revelio) => void;
+  onEndAfter?: (this: Revelio) => void | Promise<void>;
 
   /**
    * Function to call just when this.nextStep() starts its execution.
    * If this method returns false, the regular flow will be interrupted
    */
-  onNextBefore?: (this: Revelio) => void | boolean;
+  onNextBefore?: (this: Revelio) => void | boolean | Promise<void | boolean>;
 
   /**
    * Function to call just after the current step is unmounted.
    */
-  onNextAfterUnmountStep?: (this: Revelio) => void;
+  onNextAfterUnmountStep?: (this: Revelio) => void | Promise<void>;
 
   /**
    * Function to call when this.nextStep() finishes its execution.
    */
-  onNextAfter?: (this: Revelio) => void;
+  onNextAfter?: (this: Revelio) => void | Promise<void>;
 
   /**
    * Function to call just when this.prevStep() starts its execution.
    * If this method returns false, the regular flow will be interrupted
    */
-  onPrevBefore?: (this: Revelio) => void | boolean;
+  onPrevBefore?: (this: Revelio) => void | boolean | Promise<void | boolean>;
 
   /**
    * Function to call just after the current step is unmounted.
    */
-  onPrevAfterUnmountStep?: (this: Revelio) => void;
+  onPrevAfterUnmountStep?: (this: Revelio) => void | Promise<void>;
 
   /**
    * Function to call when this.prevStep() finishes its execution.
    */
-  onPrevAfter?: (this: Revelio) => void;
+  onPrevAfter?: (this: Revelio) => void | Promise<void>;
 
   /**
    * Function to call when the skip button is clicked before the tour ends.
    * If this method returns false, the regular flow will be interrupted
    */
-  onSkipBefore?: (this: Revelio) => void | boolean;
+  onSkipBefore?: (this: Revelio) => void | boolean | Promise<void | boolean>;
 
   /**
    * Function to call when the user clicks the 'Done' button and the tour has ended.
@@ -206,7 +202,7 @@ type RevelioSharedConfig = {
    * If you want ton ensure a callback is executed when the tour ends, use 'onEndAfter'
    * Runs after this.onEndAfter()
    */
-  onDone?: (this: Revelio) => void;
+  onDone?: (this: Revelio) => void | Promise<void>;
 };
 
 /**
@@ -269,8 +265,8 @@ const defaultOptions: RevelioOptions = {
 
 const zIndexValue = '10000';
 const zIndexOverlayValue = '9999';
-const revelioElementAncestorWithOpacityClass =
-  'revelio-element-ancestor-with-opacity';
+const revelioElementAncestorWithOverlayClass =
+  'revelio-element-ancestor-with-overlay';
 
 export class Revelio {
   private static _started: boolean;
@@ -569,7 +565,7 @@ export class Revelio {
     if (this._transitionBlocked) {
       return;
     }
-    const continueFlow = this._onSkipBefore?.();
+    const continueFlow = await this._onSkipBefore?.();
     if (continueFlow === false) {
       return;
     }
@@ -593,6 +589,7 @@ export class Revelio {
     overlay.style.height = '100%';
     overlay.style.backgroundColor = this._baseConfig.overlayColor;
     overlay.style.zIndex = zIndexOverlayValue;
+    document.documentElement.style.cssText += `--revelio-z-index: ${zIndexOverlayValue};`;
     overlay.id = 'revelio-overlay';
 
     overlay.onclick = this.skipTour.bind(this);
@@ -634,6 +631,7 @@ export class Revelio {
     const rootElementRect = this._rootElement.getBoundingClientRect();
     const rootElementWidth = rootElementRect.width;
     const rootElementHeight = rootElementRect.height;
+    let currentPlacement: RevelioOptions['placement'] | undefined;
 
     const getDialogPosition = (
       placementArray: RevelioOptions['placement'][],
@@ -641,7 +639,7 @@ export class Revelio {
       let dialogLeft: number = 0,
         dialogTop: number = 0;
 
-      const currentPlacement = placementArray.shift();
+      currentPlacement = placementArray.shift();
 
       if (!currentPlacement) {
         throw this._createError('No placement specified');
@@ -736,6 +734,11 @@ export class Revelio {
       rootElementWidth - dialogSpaceWidth
     }px)`;
 
+    if (currentPlacement === 'center' && this._rootElement === document.body) {
+      dialog.style.transform = 'translate(-50%, -50%)';
+      dialog.style.top = '50%';
+      dialog.style.left = '50%';
+    }
     // Set CSS to make it visible
     setTimeout(() => {
       dialog.style.visibility = '';
@@ -765,7 +768,7 @@ export class Revelio {
 
     // dialog class
     if (this._dialogClass) {
-      dialog.classList.add(...arrayFromString(this._dialogClass));
+      dialog.classList.add(...arrayFromClassesString(this._dialogClass));
     }
 
     return dialog;
@@ -780,7 +783,7 @@ export class Revelio {
       title.style.marginBottom = '1rem';
     }
     if (this._titleClass) {
-      title.classList.add(...arrayFromString(this._titleClass));
+      title.classList.add(...arrayFromClassesString(this._titleClass));
     }
     return title;
   }
@@ -789,7 +792,7 @@ export class Revelio {
     const content = document.createElement('div');
     content.innerHTML = step.content;
     if (this._contentClass) {
-      content.classList.add(...arrayFromString(this._contentClass));
+      content.classList.add(...arrayFromClassesString(this._contentClass));
     }
     return content;
   }
@@ -806,7 +809,7 @@ export class Revelio {
     }
     stepsInfo.textContent = `${this._currentIndex + 1}/${this._journey.length}`;
     if (this._stepsInfoClass) {
-      stepsInfo.classList.add(...arrayFromString(this._stepsInfoClass));
+      stepsInfo.classList.add(...arrayFromClassesString(this._stepsInfoClass));
     }
     return stepsInfo;
   }
@@ -825,7 +828,7 @@ export class Revelio {
       btn.style.fontSize = '1rem';
     }
     if (this._btnClass) {
-      btn.classList.add(...arrayFromString(this._btnClass));
+      btn.classList.add(...arrayFromClassesString(this._btnClass));
     }
     return btn;
   }
@@ -863,7 +866,7 @@ export class Revelio {
     if (this._showDoneBtn) {
       const doneBtn = this._createButton(this._doneBtnText, async () => {
         await this.end();
-        this._onDone?.();
+        await this._onDone?.();
       });
       nextBtnContainer.appendChild(doneBtn);
     }
@@ -970,41 +973,69 @@ export class Revelio {
     );
   }
 
+  private _addOverlayInsideElement(element: HTMLElement, id: string) {
+    const elementComputedStyle = window.getComputedStyle(element);
+    const overlay = document.createElement('div');
+    overlay.id = `revelio-overlay-${id}`;
+    overlay.style.position = 'absolute';
+    overlay.style.top = `calc(0px - ${elementComputedStyle.borderWidth})`;
+    overlay.style.left = `calc(0px - ${elementComputedStyle.borderWidth})`;
+    overlay.style.width = `calc(${elementComputedStyle.width} )`;
+    overlay.style.height = `calc(${elementComputedStyle.height} )`;
+    if (elementComputedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+      overlay.style.backgroundColor = this._baseConfig.overlayColor;
+    }
+    overlay.style.border = elementComputedStyle.border;
+    overlay.style.borderRadius = elementComputedStyle.borderRadius;
+    overlay.style.borderColor = this._baseConfig.overlayColor;
+    overlay.style.zIndex = `calc(var(--revelio-z-index) + 1)`;
+    overlay.onclick = this.skipTour.bind(this);
+    element.appendChild(overlay);
+  }
+
   private async _createStackedContextsOverlays(
     highlightedElement: HTMLElement,
   ) {
     if (this._stackingContextAncestors) {
       // Get the alpha value of the current overlay
-      if (!document.querySelector('#revelio-ancestor-overlay-style')) {
-        const currentRootOverlay = document.querySelector('#revelio-overlay');
-        let opacity = 0.5 * 100;
-        if (currentRootOverlay) {
-          const alpha = getBgAlphaFromElement(currentRootOverlay) ?? 0.5;
-          const invertedAlpha = Math.abs(1 - alpha);
-          opacity = invertedAlpha * 100;
-        } else {
-          opacity = 30;
-        }
-
+      if (!document.querySelector('#revelio-overlay-ancestor-style')) {
         const style = document.createElement('style');
         style.setAttribute('type', 'text/css');
-        style.id = 'revelio-ancestor-overlay-style';
-        style.innerHTML = `.${revelioElementAncestorWithOpacityClass} { opacity: ${opacity}% !important; }`;
-        document.head.appendChild(style);
+        style.id = 'revelio-overlay-ancestor-style';
+        style.innerHTML = `.${revelioElementAncestorWithOverlayClass} { position: relative; }`;
+        // prepend so other styles can override this one
+        document.head.prepend(style);
       }
 
-      function setOpacityToSiblingsWithoutHighlightedElement(
+      function addOverlayToSiblingsWithoutHighlightedElement(
         ancestorElement: HTMLElement,
+        revelioInstance: Revelio,
       ) {
         // get all the children of the ancestorElement
         const children = ancestorElement.children;
         for (let i = 0; i < children.length; i++) {
           const child = children[i];
           if (child instanceof HTMLElement && child !== highlightedElement) {
-            if (!child.contains(highlightedElement)) {
-              child.classList.add(revelioElementAncestorWithOpacityClass);
+            const childComputedStyle = window.getComputedStyle(child);
+            if (
+              !child.contains(highlightedElement) &&
+              childComputedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)'
+            ) {
+              // the child has a background color, so we will apply an overlay to reduce its visibility
+              if (childComputedStyle.position === 'static') {
+                child.classList.add(revelioElementAncestorWithOverlayClass);
+              }
+              revelioInstance._addOverlayInsideElement(
+                child,
+                `ancestor-sibling-${i}`,
+              );
+            } else {
+              // continue checking the children of the child
+              addOverlayToSiblingsWithoutHighlightedElement(
+                child,
+                revelioInstance,
+              );
             }
-            setOpacityToSiblingsWithoutHighlightedElement(child);
           }
         }
       }
@@ -1018,8 +1049,7 @@ export class Revelio {
 
           ancestor.originalStyles = { ...stackingContextAncestorElement.style };
 
-          stackingContextAncestorElement.style.zIndex = zIndexValue;
-
+          stackingContextAncestorElement.style.zIndex = `calc(var(--revelio-z-index) + ${idx} + 1)`;
           const ancestorElementComputedStyle = window.getComputedStyle(
             stackingContextAncestorElement,
           );
@@ -1028,26 +1058,19 @@ export class Revelio {
           }
 
           // add overlay inside the stacking context ancestor
-          const overlay = document.createElement('div');
-          overlay.id = `revelio-ancestor-overlay-${idx}`;
-          overlay.style.position = 'absolute';
-          overlay.style.top = '0';
-          overlay.style.left = '0';
-          overlay.style.width = '100%';
-          overlay.style.height = '100%';
+          this._addOverlayInsideElement(
+            stackingContextAncestorElement,
+            `ancestor-${idx}`,
+          );
           if (
-            // this means that the background is not transparent
-            ancestorElementComputedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)'
+            // this means that the background is transparent
+            ancestorElementComputedStyle.backgroundColor === 'rgba(0, 0, 0, 0)'
           ) {
-            overlay.style.backgroundColor = this._baseConfig.overlayColor;
-          } else {
-            setOpacityToSiblingsWithoutHighlightedElement(
+            addOverlayToSiblingsWithoutHighlightedElement(
               stackingContextAncestorElement,
+              this,
             );
           }
-          overlay.style.zIndex = zIndexOverlayValue;
-          overlay.onclick = this.skipTour.bind(this);
-          stackingContextAncestorElement.appendChild(overlay);
         }),
       );
     }
@@ -1057,7 +1080,11 @@ export class Revelio {
     await this._createStackedContextsOverlays(element);
 
     const elementComputedStyle = window.getComputedStyle(element);
-    element.style.zIndex = zIndexValue;
+    element.style.zIndex = (
+      +zIndexOverlayValue +
+      (this._stackingContextAncestors?.length ?? 0) +
+      1
+    ).toString();
     if (elementComputedStyle.position === 'static') {
       element.style.position = 'relative';
     }
@@ -1204,7 +1231,7 @@ export class Revelio {
   };
 
   public async start() {
-    const continueFlow = this._onStartBefore?.();
+    const continueFlow = await this._onStartBefore?.();
     if (continueFlow === false) {
       return;
     }
@@ -1226,11 +1253,11 @@ export class Revelio {
 
     this._transitionBlocked = false;
 
-    this._onStartAfter?.();
+    await this._onStartAfter?.();
   }
 
   public async end() {
-    const continueFlow = this._onEndBefore?.();
+    const continueFlow = await this._onEndBefore?.();
     if (continueFlow === false) {
       return;
     }
@@ -1244,7 +1271,7 @@ export class Revelio {
 
     try {
       await this._unmountStep();
-      this._onEndAfterUnmountStep?.();
+      await this._onEndAfterUnmountStep?.();
     } catch (e) {} // to continue the execution even if there is an error
 
     this._currentIndex = 0;
@@ -1253,7 +1280,7 @@ export class Revelio {
     Revelio._started = false;
     this._transitionBlocked = false;
 
-    this._onEndAfter?.();
+    await this._onEndAfter?.();
   }
 
   private _unmountDialog() {
@@ -1275,7 +1302,7 @@ export class Revelio {
 
   private async _removeStackingContextAncestorsOverlays() {
     if (this._stackingContextAncestors) {
-      function removeOpacityFromSiblingsWithoutHighlightedElement(
+      function removeWithOverlayClassFromSiblingsWithoutHighlightedElement(
         ancestorElement: HTMLElement,
       ) {
         // get all the children of the ancestorElement
@@ -1283,10 +1310,20 @@ export class Revelio {
         for (let i = 0; i < children.length; i++) {
           const child = children[i];
           if (child instanceof HTMLElement) {
-            child.classList.remove(revelioElementAncestorWithOpacityClass);
-            removeOpacityFromSiblingsWithoutHighlightedElement(child);
+            child.classList.remove(revelioElementAncestorWithOverlayClass);
+            removeWithOverlayClassFromSiblingsWithoutHighlightedElement(child);
           }
         }
+
+        // remove child overlays
+        document
+          .querySelectorAll(`[id^="revelio-overlay-"]`)
+          .forEach((overlay) => {
+            const overlayParent = overlay.parentElement;
+            if (overlayParent) {
+              overlayParent.removeChild(overlay);
+            }
+          });
       }
       await Promise.all(
         this._stackingContextAncestors.map(async (ancestor, idx) => {
@@ -1299,11 +1336,11 @@ export class Revelio {
           if (
             ancestorElementComputedStyle.backgroundColor === 'rgba(0, 0, 0, 0)'
           ) {
-            removeOpacityFromSiblingsWithoutHighlightedElement(
+            removeWithOverlayClassFromSiblingsWithoutHighlightedElement(
               stackingContextAncestorElement,
             );
             document.head
-              .querySelector('#revelio-ancestor-overlay-style')
+              .querySelector('#revelio-overlay-ancestor-style')
               ?.remove();
           }
           stackingContextAncestorElement.style.zIndex =
@@ -1316,7 +1353,7 @@ export class Revelio {
 
           // remove overlay inside the stacking context ancestor
           const overlay = document.querySelector(
-            `#revelio-ancestor-overlay-${idx}`,
+            `#revelio-overlay-ancestor-${idx}`,
           );
 
           if (overlay) {
@@ -1391,7 +1428,7 @@ export class Revelio {
     if (this._transitionBlocked) {
       return;
     }
-    const continueFlow = this._onNextBefore?.();
+    const continueFlow = await this._onNextBefore?.();
     if (continueFlow === false) {
       return;
     }
@@ -1405,7 +1442,7 @@ export class Revelio {
        */
       console.warn('no next step, finishing tour');
       await this.end();
-      this._onDone?.();
+      await this._onDone?.();
       return;
     }
 
@@ -1413,7 +1450,7 @@ export class Revelio {
 
     await this._unmountStep();
 
-    this._onNextAfterUnmountStep?.();
+    await this._onNextAfterUnmountStep?.();
 
     this._currentIndex += 1;
     await this._setStepProps();
@@ -1421,7 +1458,7 @@ export class Revelio {
 
     this._transitionBlocked = false;
 
-    this._onNextAfter?.();
+    await this._onNextAfter?.();
   }
 
   private _boundNextStep = this.nextStep.bind(this);
@@ -1430,7 +1467,7 @@ export class Revelio {
     if (this._transitionBlocked) {
       return;
     }
-    const continueFlow = this._onPrevBefore?.();
+    const continueFlow = await this._onPrevBefore?.();
     if (continueFlow === false) {
       return;
     }
@@ -1444,7 +1481,7 @@ export class Revelio {
 
     await this._unmountStep();
 
-    this._onPrevAfterUnmountStep?.();
+    await this._onPrevAfterUnmountStep?.();
 
     this._currentIndex -= 1;
     await this._setStepProps();
@@ -1452,7 +1489,7 @@ export class Revelio {
 
     this._transitionBlocked = false;
 
-    this._onPrevAfter?.();
+    await this._onPrevAfter?.();
   }
 }
 

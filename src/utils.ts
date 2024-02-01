@@ -1,5 +1,8 @@
-function arrayFromString(classString: string) {
-  return classString.split(' ').map((c) => c.trim());
+function arrayFromClassesString(classString: string) {
+  return classString
+    .split(' ')
+    .map((c) => c.trim())
+    .filter(Boolean);
 }
 
 function getNumberFromString(string: string) {
@@ -20,4 +23,4 @@ function getBgAlphaFromElement(element: Element) {
   }
 }
 
-export { arrayFromString, getNumberFromString, getBgAlphaFromElement };
+export { arrayFromClassesString, getNumberFromString, getBgAlphaFromElement };
