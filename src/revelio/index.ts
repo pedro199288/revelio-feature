@@ -997,7 +997,6 @@ export class Revelio {
     highlightedElement: HTMLElement,
   ) {
     if (this._stackingContextAncestors) {
-      // Get the alpha value of the current overlay
       if (!document.querySelector('#revelio-overlay-ancestor-style')) {
         const style = document.createElement('style');
         style.setAttribute('type', 'text/css');
@@ -1057,7 +1056,6 @@ export class Revelio {
             stackingContextAncestorElement.style.position = 'relative';
           }
 
-          // add overlay inside the stacking context ancestor
           this._addOverlayInsideElement(
             stackingContextAncestorElement,
             `ancestor-${idx}`,
@@ -1160,6 +1158,7 @@ export class Revelio {
         const stepElement = await this._getElement(step.element);
 
         const scrollEndHandler = async () => {
+          if (resolved) return;
           const { position, dimensions } =
             await this._highlightStepElement(stepElement);
 
@@ -1168,10 +1167,6 @@ export class Revelio {
           resolved = true;
           resolve();
         };
-
-        // as dialog and blink are mounted, unmount them to mount them again after scrollend
-        this._unmountDialog();
-        this._unmountBlinkOverlay();
 
         window.addEventListener('scrollend', scrollEndHandler, {
           capture: true,
@@ -1192,16 +1187,14 @@ export class Revelio {
           block: 'center',
           inline: 'center',
         });
-      }
 
-      const { position, dimensions } =
-        await this._highlightStepElement(stepElement);
-
-      this._renderStepDialog(step, position, dimensions);
-
-      if (!this._preventScrollIntoView) {
-        setTimeout(() => {
+        setTimeout(async () => {
           if (!scrollTriggered && !resolved) {
+            const { position, dimensions } =
+              await this._highlightStepElement(stepElement);
+
+            this._renderStepDialog(step, position, dimensions);
+            resolved = true;
             resolve();
           }
         }, 50);
@@ -1314,19 +1307,9 @@ export class Revelio {
             removeWithOverlayClassFromSiblingsWithoutHighlightedElement(child);
           }
         }
-
-        // remove child overlays
-        document
-          .querySelectorAll(`[id^="revelio-overlay-"]`)
-          .forEach((overlay) => {
-            const overlayParent = overlay.parentElement;
-            if (overlayParent) {
-              overlayParent.removeChild(overlay);
-            }
-          });
       }
       await Promise.all(
-        this._stackingContextAncestors.map(async (ancestor, idx) => {
+        this._stackingContextAncestors.map(async (ancestor) => {
           const stackingContextAncestorElement = await this._getElement(
             ancestor.element,
           );
@@ -1351,14 +1334,15 @@ export class Revelio {
             stackingContextAncestorElement.removeAttribute('style');
           }
 
-          // remove overlay inside the stacking context ancestor
-          const overlay = document.querySelector(
-            `#revelio-overlay-ancestor-${idx}`,
-          );
-
-          if (overlay) {
-            stackingContextAncestorElement.removeChild(overlay);
-          }
+          // remove all overlays
+          document
+            .querySelectorAll(`[id^="revelio-overlay-"]`)
+            .forEach((overlay) => {
+              const overlayParent = overlay.parentElement;
+              if (overlayParent) {
+                overlayParent.removeChild(overlay);
+              }
+            });
         }),
       );
     }
@@ -1366,8 +1350,6 @@ export class Revelio {
 
   private async _unmountStep() {
     const step = this._getStep();
-
-    this._unmountDialog();
 
     if (step.element !== undefined) {
       const element = await this._getElement(step.element);
@@ -1387,6 +1369,7 @@ export class Revelio {
       }
       this._unmountBlinkOverlay();
     }
+    this._unmountDialog();
 
     await this._removeStackingContextAncestorsOverlays();
 

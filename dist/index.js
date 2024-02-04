@@ -627,13 +627,13 @@ class Revelio {
         }
         const stepElement2 = await this._getElement(step2.element);
         const scrollEndHandler = async () => {
-          const { position: position2, dimensions: dimensions2 } = await this._highlightStepElement(stepElement2);
-          await this._renderStepDialog(step2, position2, dimensions2);
+          if (resolved)
+            return;
+          const { position, dimensions } = await this._highlightStepElement(stepElement2);
+          await this._renderStepDialog(step2, position, dimensions);
           resolved = true;
           resolve();
         };
-        this._unmountDialog();
-        this._unmountBlinkOverlay();
         window.addEventListener("scrollend", scrollEndHandler, {
           capture: true,
           once: true
@@ -650,12 +650,11 @@ class Revelio {
           block: "center",
           inline: "center"
         });
-      }
-      const { position, dimensions } = await this._highlightStepElement(stepElement);
-      this._renderStepDialog(step, position, dimensions);
-      if (!this._preventScrollIntoView) {
-        setTimeout(() => {
+        setTimeout(async () => {
           if (!scrollTriggered && !resolved) {
+            const { position, dimensions } = await this._highlightStepElement(stepElement);
+            this._renderStepDialog(step, position, dimensions);
+            resolved = true;
             resolve();
           }
         }, 50);
@@ -743,14 +742,8 @@ class Revelio {
             removeWithOverlayClassFromSiblingsWithoutHighlightedElement(child);
           }
         }
-        document.querySelectorAll(`[id^="revelio-overlay-"]`).forEach((overlay) => {
-          const overlayParent = overlay.parentElement;
-          if (overlayParent) {
-            overlayParent.removeChild(overlay);
-          }
-        });
       };
-      await Promise.all(this._stackingContextAncestors.map(async (ancestor, idx) => {
+      await Promise.all(this._stackingContextAncestors.map(async (ancestor) => {
         const stackingContextAncestorElement = await this._getElement(ancestor.element);
         const ancestorElementComputedStyle = window.getComputedStyle(stackingContextAncestorElement);
         if (ancestorElementComputedStyle.backgroundColor === "rgba(0, 0, 0, 0)") {
@@ -762,16 +755,17 @@ class Revelio {
         if (!stackingContextAncestorElement.getAttribute("style")?.trim()) {
           stackingContextAncestorElement.removeAttribute("style");
         }
-        const overlay = document.querySelector(`#revelio-overlay-ancestor-${idx}`);
-        if (overlay) {
-          stackingContextAncestorElement.removeChild(overlay);
-        }
+        document.querySelectorAll(`[id^="revelio-overlay-"]`).forEach((overlay) => {
+          const overlayParent = overlay.parentElement;
+          if (overlayParent) {
+            overlayParent.removeChild(overlay);
+          }
+        });
       }));
     }
   }
   async _unmountStep() {
     const step = this._getStep();
-    this._unmountDialog();
     if (step.element !== undefined) {
       const element = await this._getElement(step.element);
       element.style.zIndex = "";
@@ -787,6 +781,7 @@ class Revelio {
       }
       this._unmountBlinkOverlay();
     }
+    this._unmountDialog();
     await this._removeStackingContextAncestorsOverlays();
     window.removeEventListener("scroll", this._scrollStartHandler, {
       capture: true
