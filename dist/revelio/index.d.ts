@@ -42,6 +42,10 @@ type RevelioSharedConfig = {
      */
     awaitElementTimeout: number;
     /**
+     * Elements that are expected to be animated and should be waited for before the next step
+     */
+    animatedElements: (string | HTMLElement)[];
+    /**
      * Determines whether to show the step number and total steps.
      */
     showStepsInfo: boolean;
@@ -105,64 +109,64 @@ type RevelioSharedConfig = {
      * Function to call before the feature tour starts.
      * If this method returns false, the regular flow will be interrupted
      */
-    onStartBefore?: (this: Revelio) => void | boolean;
+    onStartBefore?: (this: Revelio) => void | boolean | Promise<void | boolean>;
     /**
      * Function to call after the feature tour starts.
      */
-    onStartAfter?: (this: Revelio) => void;
+    onStartAfter?: (this: Revelio) => void | Promise<void>;
     /**
      * Function to call when this.end() starts its execution.
      * If this method returns false, the regular flow will be interrupted
      */
-    onEndBefore?: (this: Revelio) => void | boolean;
+    onEndBefore?: (this: Revelio) => void | boolean | Promise<void | boolean>;
     /**
      * Function to call after this.end() methods executes this._unmountStep().
      */
-    onEndAfterUnmountStep?: (this: Revelio) => void;
+    onEndAfterUnmountStep?: (this: Revelio) => void | Promise<void>;
     /**
      * Function to call when the tour has finished. This can happen  because
      * the user clicked the 'Done' button or becasue the user clicked
      * the 'Skip' button or outside the dialog)
      */
-    onEndAfter?: (this: Revelio) => void;
+    onEndAfter?: (this: Revelio) => void | Promise<void>;
     /**
      * Function to call just when this.nextStep() starts its execution.
      * If this method returns false, the regular flow will be interrupted
      */
-    onNextBefore?: (this: Revelio) => void | boolean;
+    onNextBefore?: (this: Revelio) => void | boolean | Promise<void | boolean>;
     /**
      * Function to call just after the current step is unmounted.
      */
-    onNextAfterUnmountStep?: (this: Revelio) => void;
+    onNextAfterUnmountStep?: (this: Revelio) => void | Promise<void>;
     /**
      * Function to call when this.nextStep() finishes its execution.
      */
-    onNextAfter?: (this: Revelio) => void;
+    onNextAfter?: (this: Revelio) => void | Promise<void>;
     /**
      * Function to call just when this.prevStep() starts its execution.
      * If this method returns false, the regular flow will be interrupted
      */
-    onPrevBefore?: (this: Revelio) => void | boolean;
+    onPrevBefore?: (this: Revelio) => void | boolean | Promise<void | boolean>;
     /**
      * Function to call just after the current step is unmounted.
      */
-    onPrevAfterUnmountStep?: (this: Revelio) => void;
+    onPrevAfterUnmountStep?: (this: Revelio) => void | Promise<void>;
     /**
      * Function to call when this.prevStep() finishes its execution.
      */
-    onPrevAfter?: (this: Revelio) => void;
+    onPrevAfter?: (this: Revelio) => void | Promise<void>;
     /**
      * Function to call when the skip button is clicked before the tour ends.
      * If this method returns false, the regular flow will be interrupted
      */
-    onSkipBefore?: (this: Revelio) => void | boolean;
+    onSkipBefore?: (this: Revelio) => void | boolean | Promise<void | boolean>;
     /**
      * Function to call when the user clicks the 'Done' button and the tour has ended.
      * Ths is not triggered when skipping the tour (clicking outside the dialog or the skip button)
      * If you want ton ensure a callback is executed when the tour ends, use 'onEndAfter'
      * Runs after this.onEndAfter()
      */
-    onDone?: (this: Revelio) => void;
+    onDone?: (this: Revelio) => void | Promise<void>;
 };
 /**
  * Options passed to the Revelio constructor
@@ -222,6 +226,7 @@ export declare class Revelio {
     private _goNextOnClick;
     private _requireClickToGoNext;
     private _awaitElementTimeout;
+    private _animatedElements;
     private _showStepsInfo;
     private _dialogClass;
     private _titleClass;
@@ -296,6 +301,7 @@ export declare class Revelio {
     private _createOrMoveRootOverlay;
     private _renderStepDialog;
     private _createBlinkOverlay;
+    private _addOverlayInsideElement;
     private _createStackedContextsOverlays;
     private _highlightStepElement;
     /**
@@ -303,6 +309,11 @@ export declare class Revelio {
      */
     private _getStep;
     private _scrollStartHandler;
+    private _highlightAndRenderDialog;
+    /**
+     * Await for elements to animate, if any
+     */
+    private _awaitAnimatedElements;
     /**
      * Overlay that covers the element for the current step
      */

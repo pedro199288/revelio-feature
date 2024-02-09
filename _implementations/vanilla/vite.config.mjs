@@ -1,6 +1,9 @@
+import tailwindCss from 'tailwindcss';
+import autoprefixer from 'autoprefixer';
+
 /** @type {import('vite').UserConfig} */
 export default {
   css: {
-    postcss: { plugins: [require('tailwindcss'), require('autoprefixer')] },
+    postcss: { plugins: [tailwindCss, autoprefixer] },
   },
 };
