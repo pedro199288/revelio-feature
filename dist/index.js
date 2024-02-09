@@ -39,6 +39,7 @@ var defaultOptions = {
 var zIndexValue = "10000";
 var zIndexOverlayValue = "9999";
 var revelioElementAncestorWithOverlayClass = "revelio-element-ancestor-with-overlay";
+var revelioElementAncestorWithOpacityClass = "revelio-element-ancestor-with-opacity";
 
 class Revelio {
   static _started;
@@ -539,13 +540,17 @@ class Revelio {
         const children = ancestorElement.children;
         for (let i = 0;i < children.length; i++) {
           const child = children[i];
-          if (child instanceof HTMLElement && child !== highlightedElement) {
+          if (child instanceof HTMLElement && child !== highlightedElement && !child.id.match(/revelio-overlay/)) {
             const childComputedStyle = window.getComputedStyle(child);
-            if (!child.contains(highlightedElement) && childComputedStyle.backgroundColor !== "rgba(0, 0, 0, 0)") {
-              if (childComputedStyle.position === "static") {
-                child.classList.add(revelioElementAncestorWithOverlayClass);
+            if (!child.contains(highlightedElement)) {
+              if (childComputedStyle.backgroundColor !== "rgba(0, 0, 0, 0)") {
+                if (childComputedStyle.position === "static") {
+                  child.classList.add(revelioElementAncestorWithOverlayClass);
+                }
+                revelioInstance._addOverlayInsideElement(child, `ancestor-sibling-${i}`);
+              } else {
+                child.classList.add(revelioElementAncestorWithOpacityClass);
               }
-              revelioInstance._addOverlayInsideElement(child, `ancestor-sibling-${i}`);
             } else {
               addOverlayToSiblingsWithoutHighlightedElement(child, revelioInstance);
             }
@@ -556,7 +561,10 @@ class Revelio {
         const style = document.createElement("style");
         style.setAttribute("type", "text/css");
         style.id = "revelio-overlay-ancestor-style";
-        style.innerHTML = `.${revelioElementAncestorWithOverlayClass} { position: relative; }`;
+        style.innerHTML = `
+          .${revelioElementAncestorWithOverlayClass} { position: relative; }
+          .${revelioElementAncestorWithOpacityClass} { opacity: 0.2; }
+        `;
         document.head.prepend(style);
       }
       await Promise.all(this._stackingContextAncestors.map(async (ancestor, idx) => {
@@ -775,6 +783,7 @@ class Revelio {
           const child = children[i];
           if (child instanceof HTMLElement) {
             child.classList.remove(revelioElementAncestorWithOverlayClass);
+            child.classList.remove(revelioElementAncestorWithOpacityClass);
             removeWithOverlayClassFromSiblingsWithoutHighlightedElement(child);
           }
         }

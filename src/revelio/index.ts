@@ -273,6 +273,8 @@ const zIndexValue = '10000';
 const zIndexOverlayValue = '9999';
 const revelioElementAncestorWithOverlayClass =
   'revelio-element-ancestor-with-overlay';
+const revelioElementAncestorWithOpacityClass =
+  'revelio-element-ancestor-with-opacity';
 
 export class Revelio {
   private static _started: boolean;
@@ -1015,7 +1017,11 @@ export class Revelio {
         const style = document.createElement('style');
         style.setAttribute('type', 'text/css');
         style.id = 'revelio-overlay-ancestor-style';
-        style.innerHTML = `.${revelioElementAncestorWithOverlayClass} { position: relative; }`;
+        style.innerHTML = `
+          .${revelioElementAncestorWithOverlayClass} { position: relative; }
+          .${revelioElementAncestorWithOpacityClass} { opacity: 0.2; }
+        `;
+        // NOTE: the opacity doesn't reduce the vissibility as an overlay but is good enough to indicate that the element is not the highlighted one
         // prepend so other styles can override this one
         document.head.prepend(style);
       }
@@ -1028,20 +1034,26 @@ export class Revelio {
         const children = ancestorElement.children;
         for (let i = 0; i < children.length; i++) {
           const child = children[i];
-          if (child instanceof HTMLElement && child !== highlightedElement) {
+          if (
+            child instanceof HTMLElement &&
+            child !== highlightedElement &&
+            !child.id.match(/revelio-overlay/)
+          ) {
             const childComputedStyle = window.getComputedStyle(child);
-            if (
-              !child.contains(highlightedElement) &&
-              childComputedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)'
-            ) {
-              // the child has a background color, so we will apply an overlay to reduce its visibility
-              if (childComputedStyle.position === 'static') {
-                child.classList.add(revelioElementAncestorWithOverlayClass);
+            if (!child.contains(highlightedElement)) {
+              if (childComputedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+                // the child has a background color, so we will apply an overlay to reduce its visibility
+                if (childComputedStyle.position === 'static') {
+                  // this class is for the overlay to work in a relative positioned element
+                  child.classList.add(revelioElementAncestorWithOverlayClass);
+                }
+                revelioInstance._addOverlayInsideElement(
+                  child,
+                  `ancestor-sibling-${i}`,
+                );
+              } else {
+                child.classList.add(revelioElementAncestorWithOpacityClass);
               }
-              revelioInstance._addOverlayInsideElement(
-                child,
-                `ancestor-sibling-${i}`,
-              );
             } else {
               // continue checking the children of the child
               addOverlayToSiblingsWithoutHighlightedElement(
@@ -1367,6 +1379,7 @@ export class Revelio {
           const child = children[i];
           if (child instanceof HTMLElement) {
             child.classList.remove(revelioElementAncestorWithOverlayClass);
+            child.classList.remove(revelioElementAncestorWithOpacityClass);
             removeWithOverlayClassFromSiblingsWithoutHighlightedElement(child);
           }
         }
