@@ -42,6 +42,10 @@ type RevelioSharedConfig = {
      */
     awaitElementTimeout: number;
     /**
+     * Elements that are expected to be animated and should be waited for before the next step
+     */
+    animatedElements: (string | HTMLElement)[];
+    /**
      * Determines whether to show the step number and total steps.
      */
     showStepsInfo: boolean;
@@ -222,6 +226,7 @@ export declare class Revelio {
     private _goNextOnClick;
     private _requireClickToGoNext;
     private _awaitElementTimeout;
+    private _animatedElements;
     private _showStepsInfo;
     private _dialogClass;
     private _titleClass;
@@ -304,6 +309,11 @@ export declare class Revelio {
      */
     private _getStep;
     private _scrollStartHandler;
+    private _highlightAndRenderDialog;
+    /**
+     * Await for elements to animate, if any
+     */
+    private _awaitAnimatedElements;
     /**
      * Overlay that covers the element for the current step
      */

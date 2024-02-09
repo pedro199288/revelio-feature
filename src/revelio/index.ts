@@ -55,6 +55,11 @@ type RevelioSharedConfig = {
   awaitElementTimeout: number;
 
   /**
+   * Elements that are expected to be animated and should be waited for before the next step
+   */
+  animatedElements: (string | HTMLElement)[];
+
+  /**
    * Determines whether to show the step number and total steps.
    */
   showStepsInfo: boolean;
@@ -245,6 +250,7 @@ const defaultOptions: RevelioOptions = {
   goNextOnClick: false,
   requireClickToGoNext: undefined,
   awaitElementTimeout: 5000,
+  animatedElements: [],
   showStepsInfo: true,
   dialogClass: '',
   titleClass: '',
@@ -313,6 +319,8 @@ export class Revelio {
     defaultOptions.requireClickToGoNext;
   private _awaitElementTimeout: RevelioOptions['awaitElementTimeout'] =
     defaultOptions.awaitElementTimeout;
+  private _animatedElements: RevelioOptions['animatedElements'] =
+    defaultOptions.animatedElements;
   private _showStepsInfo: RevelioOptions['showStepsInfo'] =
     defaultOptions.showStepsInfo;
   private _dialogClass: RevelioOptions['dialogClass'] =
@@ -500,6 +508,8 @@ export class Revelio {
       this._baseConfig.requireClickToGoNext;
     this._awaitElementTimeout =
       stepOptions?.awaitElementTimeout ?? this._baseConfig.awaitElementTimeout;
+    this._animatedElements =
+      stepOptions?.animatedElements ?? this._baseConfig.animatedElements;
     this._showStepsInfo =
       stepOptions?.showStepsInfo ?? this._baseConfig.showStepsInfo;
     this._dialogClass =
@@ -1129,6 +1139,52 @@ export class Revelio {
 
   private _scrollStartHandler = () => {};
 
+  private async _highlightAndRenderDialog(stepElement: HTMLElement) {
+    const { position, dimensions } =
+      await this._highlightStepElement(stepElement);
+    await this._renderStepDialog(this._getStep(), position, dimensions);
+  }
+
+  /**
+   * Await for elements to animate, if any
+   */
+  private async _awaitAnimatedElements() {
+    if (this._animatedElements.length > 0) {
+      const animatedElementsStillAnimatingPromises = this._animatedElements
+        .map((selector) => this._getElement(selector))
+        .filter(async (element) => {
+          const { animationPlayState, transitionProperty } =
+            window.getComputedStyle(await element);
+          return (
+            animationPlayState === 'running' || transitionProperty !== 'none'
+          );
+        })
+        .map(
+          (element) =>
+            new Promise<void>(async (resolve) => {
+              element.then((element) => {
+                const animationEndHandler = () => {
+                  element.removeEventListener(
+                    'animationend',
+                    animationEndHandler,
+                  );
+                  element.removeEventListener(
+                    'transitionend',
+                    animationEndHandler,
+                  );
+                  resolve();
+                };
+                element.addEventListener('animationend', animationEndHandler);
+                element.addEventListener('transitionend', animationEndHandler);
+              });
+            }),
+        );
+      if (animatedElementsStillAnimatingPromises.length > 0) {
+        await Promise.all(animatedElementsStillAnimatingPromises);
+      }
+    }
+  }
+
   /**
    * Overlay that covers the element for the current step
    */
@@ -1141,45 +1197,46 @@ export class Revelio {
         return resolve();
       }
 
+      await this._awaitAnimatedElements();
+
       const stepElement = await this._getElement(step.element);
 
-      // flag to not resolve if scroll event is triggered
-      let scrollTriggered = false;
-      let resolved = false;
-
-      const scrollStartHandler = async () => {
-        scrollTriggered = true;
-        const step = this._getStep();
-        if (step.element === undefined) {
-          this._placement = 'center';
-          await this._renderStepDialog(step);
-          return;
-        }
-        const stepElement = await this._getElement(step.element);
+      if (!this._preventScrollIntoView) {
+        // flag to not resolve if scroll event is triggered
+        let scrollTriggered = false;
+        let resolved = false;
 
         const scrollEndHandler = async () => {
           if (resolved) return;
-          const { position, dimensions } =
-            await this._highlightStepElement(stepElement);
-
-          await this._renderStepDialog(step, position, dimensions);
-
+          await this._highlightAndRenderDialog(stepElement);
           resolved = true;
           resolve();
         };
 
-        window.addEventListener('scrollend', scrollEndHandler, {
-          capture: true,
-          once: true,
-        });
-      };
+        const scrollStartHandler = async () => {
+          if (!scrollTriggered) {
+            scrollTriggered = true;
+            const step = this._getStep();
+            if (step.element === undefined) {
+              console.error(
+                'no element, is undefined and will only render dialog',
+              );
+              this._placement = 'center';
+              await this._renderStepDialog(step);
+              resolved = true;
+              return;
+            }
+          }
 
-      this._scrollStartHandler = scrollStartHandler;
+          // NOTE: this is a workaround because scrollend does not work always
+          clearTimeout(window.scrollEndTimer);
+          window.scrollEndTimer = setTimeout(scrollEndHandler, 100);
+        };
 
-      if (!this._preventScrollIntoView) {
+        this._scrollStartHandler = scrollStartHandler;
+
         window.addEventListener('scroll', this._scrollStartHandler, {
           capture: true,
-          once: true,
         });
 
         stepElement.scrollIntoView({
@@ -1188,17 +1245,19 @@ export class Revelio {
           inline: 'center',
         });
 
-        setTimeout(async () => {
-          if (!scrollTriggered && !resolved) {
-            const { position, dimensions } =
-              await this._highlightStepElement(stepElement);
-
-            this._renderStepDialog(step, position, dimensions);
-            resolved = true;
-            resolve();
-          }
-        }, 50);
+        if (!scrollTriggered) {
+          // if the scroll has been triggered there is no need to wait for the setTimeout
+          setTimeout(async () => {
+            if (!scrollTriggered && !resolved) {
+              // scrollTriggered needs to be checked again as it might have changed
+              await this._highlightAndRenderDialog(stepElement);
+              resolved = true;
+              resolve();
+            }
+          }, 50);
+        }
       } else {
+        await this._highlightAndRenderDialog(stepElement);
         resolve();
       }
     });

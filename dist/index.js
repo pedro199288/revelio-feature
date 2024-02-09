@@ -18,6 +18,7 @@ var defaultOptions = {
   goNextOnClick: false,
   requireClickToGoNext: undefined,
   awaitElementTimeout: 5000,
+  animatedElements: [],
   showStepsInfo: true,
   dialogClass: "",
   titleClass: "",
@@ -58,6 +59,7 @@ class Revelio {
   _goNextOnClick = defaultOptions.goNextOnClick;
   _requireClickToGoNext = defaultOptions.requireClickToGoNext;
   _awaitElementTimeout = defaultOptions.awaitElementTimeout;
+  _animatedElements = defaultOptions.animatedElements;
   _showStepsInfo = defaultOptions.showStepsInfo;
   _dialogClass = defaultOptions.dialogClass;
   _titleClass = defaultOptions.titleClass;
@@ -173,6 +175,7 @@ class Revelio {
     this._goNextOnClick = stepOptions?.requireClickToGoNext ?? this._baseConfig.requireClickToGoNext ?? stepOptions?.goNextOnClick ?? this._baseConfig.goNextOnClick;
     this._requireClickToGoNext = stepOptions?.requireClickToGoNext ?? this._baseConfig.requireClickToGoNext;
     this._awaitElementTimeout = stepOptions?.awaitElementTimeout ?? this._baseConfig.awaitElementTimeout;
+    this._animatedElements = stepOptions?.animatedElements ?? this._baseConfig.animatedElements;
     this._showStepsInfo = stepOptions?.showStepsInfo ?? this._baseConfig.showStepsInfo;
     this._dialogClass = stepOptions?.dialogClass ?? this._baseConfig.dialogClass;
     this._titleClass = stepOptions?.titleClass ?? this._baseConfig.titleClass;
@@ -606,6 +609,31 @@ class Revelio {
   }
   _scrollStartHandler = () => {
   };
+  async _highlightAndRenderDialog(stepElement) {
+    const { position, dimensions } = await this._highlightStepElement(stepElement);
+    await this._renderStepDialog(this._getStep(), position, dimensions);
+  }
+  async _awaitAnimatedElements() {
+    if (this._animatedElements.length > 0) {
+      const animatedElementsStillAnimatingPromises = this._animatedElements.map((selector) => this._getElement(selector)).filter(async (element) => {
+        const { animationPlayState, transitionProperty } = window.getComputedStyle(await element);
+        return animationPlayState === "running" || transitionProperty !== "none";
+      }).map((element) => new Promise(async (resolve) => {
+        element.then((element2) => {
+          const animationEndHandler = () => {
+            element2.removeEventListener("animationend", animationEndHandler);
+            element2.removeEventListener("transitionend", animationEndHandler);
+            resolve();
+          };
+          element2.addEventListener("animationend", animationEndHandler);
+          element2.addEventListener("transitionend", animationEndHandler);
+        });
+      }));
+      if (animatedElementsStillAnimatingPromises.length > 0) {
+        await Promise.all(animatedElementsStillAnimatingPromises);
+      }
+    }
+  }
   async _mountStep() {
     return new Promise(async (resolve) => {
       const step = this._getStep();
@@ -614,51 +642,53 @@ class Revelio {
         await this._renderStepDialog(step);
         return resolve();
       }
+      await this._awaitAnimatedElements();
       const stepElement = await this._getElement(step.element);
-      let scrollTriggered = false;
-      let resolved = false;
-      const scrollStartHandler = async () => {
-        scrollTriggered = true;
-        const step2 = this._getStep();
-        if (step2.element === undefined) {
-          this._placement = "center";
-          await this._renderStepDialog(step2);
-          return;
-        }
-        const stepElement2 = await this._getElement(step2.element);
+      if (!this._preventScrollIntoView) {
+        let scrollTriggered = false;
+        let resolved = false;
         const scrollEndHandler = async () => {
           if (resolved)
             return;
-          const { position, dimensions } = await this._highlightStepElement(stepElement2);
-          await this._renderStepDialog(step2, position, dimensions);
+          await this._highlightAndRenderDialog(stepElement);
           resolved = true;
           resolve();
         };
-        window.addEventListener("scrollend", scrollEndHandler, {
-          capture: true,
-          once: true
-        });
-      };
-      this._scrollStartHandler = scrollStartHandler;
-      if (!this._preventScrollIntoView) {
+        const scrollStartHandler = async () => {
+          if (!scrollTriggered) {
+            scrollTriggered = true;
+            const step2 = this._getStep();
+            if (step2.element === undefined) {
+              console.error("no element, is undefined and will only render dialog");
+              this._placement = "center";
+              await this._renderStepDialog(step2);
+              resolved = true;
+              return;
+            }
+          }
+          clearTimeout(window.scrollEndTimer);
+          window.scrollEndTimer = setTimeout(scrollEndHandler, 100);
+        };
+        this._scrollStartHandler = scrollStartHandler;
         window.addEventListener("scroll", this._scrollStartHandler, {
-          capture: true,
-          once: true
+          capture: true
         });
         stepElement.scrollIntoView({
           behavior: "smooth",
           block: "center",
           inline: "center"
         });
-        setTimeout(async () => {
-          if (!scrollTriggered && !resolved) {
-            const { position, dimensions } = await this._highlightStepElement(stepElement);
-            this._renderStepDialog(step, position, dimensions);
-            resolved = true;
-            resolve();
-          }
-        }, 50);
+        if (!scrollTriggered) {
+          setTimeout(async () => {
+            if (!scrollTriggered && !resolved) {
+              await this._highlightAndRenderDialog(stepElement);
+              resolved = true;
+              resolve();
+            }
+          }, 50);
+        }
       } else {
+        await this._highlightAndRenderDialog(stepElement);
         resolve();
       }
     });
