@@ -253,9 +253,12 @@ class Revelio {
     const dialogMargin = getNumberFromString(dialogComputedStyle.margin);
     const dialogSpaceWidth = dialogBoundingRect.width + dialogMargin * 2;
     const dialogSpaceHeight = dialogBoundingRect.height + dialogMargin * 2;
-    const rootElementRect = this._rootElement.getBoundingClientRect();
-    const rootElementWidth = rootElementRect.width;
-    const rootElementHeight = rootElementRect.height;
+    const viewportLeft = window.scrollX || window.pageXOffset;
+    const viewportTop = window.scrollY || window.pageYOffset;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const viewportBottom = viewportTop + viewportHeight;
+    const viewportRight = viewportLeft + viewportWidth;
     let currentPlacement;
     const getDialogPosition = (placementArray2) => {
       let dialogLeft2 = 0, dialogTop2 = 0;
@@ -264,8 +267,8 @@ class Revelio {
         throw this._createError("No placement specified");
       }
       if (currentPlacement === "center") {
-        dialogLeft2 = rootElementWidth / 2 - dialogSpaceWidth / 2;
-        dialogTop2 = rootElementHeight / 2 - dialogSpaceHeight / 2;
+        dialogLeft2 = viewportWidth / 2 - dialogSpaceWidth / 2;
+        dialogTop2 = viewportHeight / 2 - dialogSpaceHeight / 2;
       } else {
         if (!elementPosition || !elementDimensions) {
           throw this._createError("No element position or dimensions specified");
@@ -276,7 +279,7 @@ class Revelio {
           case "left":
             dialogLeft2 = elementPosition.left - dialogSpaceWidth;
             dialogTop2 = elementYCenter - dialogSpaceHeight / 2;
-            if (dialogLeft2 < rootElementRect.left) {
+            if (dialogLeft2 < viewportLeft) {
               if (placementArray2.length > 0) {
                 return getDialogPosition(placementArray2);
               }
@@ -285,7 +288,7 @@ class Revelio {
           case "right":
             dialogLeft2 = elementPosition.left + elementDimensions.width;
             dialogTop2 = elementYCenter - dialogSpaceHeight / 2;
-            if (dialogLeft2 + dialogSpaceWidth > rootElementRect.right) {
+            if (dialogLeft2 + dialogSpaceWidth > viewportRight) {
               if (placementArray2.length > 0) {
                 return getDialogPosition(placementArray2);
               }
@@ -294,7 +297,7 @@ class Revelio {
           case "top":
             dialogLeft2 = elementXCenter - dialogSpaceWidth / 2;
             dialogTop2 = elementPosition.top - dialogSpaceHeight;
-            if (dialogTop2 < rootElementRect.top) {
+            if (dialogTop2 < viewportTop) {
               if (placementArray2.length > 0) {
                 return getDialogPosition(placementArray2);
               }
@@ -304,7 +307,7 @@ class Revelio {
           default:
             dialogLeft2 = elementXCenter - dialogSpaceWidth / 2;
             dialogTop2 = elementPosition.top + elementDimensions.height;
-            if (dialogTop2 + dialogSpaceHeight > rootElementRect.bottom) {
+            if (dialogTop2 + dialogSpaceHeight > viewportBottom) {
               if (placementArray2.length > 0) {
                 return getDialogPosition(placementArray2);
               }
@@ -319,12 +322,15 @@ class Revelio {
     };
     const placementArray = this._getPlacementArray(this._placement);
     const { dialogLeft, dialogTop } = getDialogPosition(placementArray);
-    dialog.style.top = `clamp(0px, ${dialogTop}px, ${rootElementHeight - dialogSpaceHeight}px)`;
-    dialog.style.left = `clamp(0px, ${dialogLeft}px, ${rootElementWidth - dialogSpaceWidth}px)`;
+    dialog.style.top = `clamp(${viewportTop}px, ${dialogTop}px, ${viewportBottom - dialogSpaceHeight}px)`;
+    dialog.style.left = `clamp(${viewportLeft}px,
+    ${dialogLeft}px, ${viewportRight - dialogSpaceWidth}px)`;
     if (currentPlacement === "center" && this._rootElement === document.body) {
+      dialog.style.position = "fixed";
       dialog.style.transform = "translate(-50%, -50%)";
       dialog.style.top = "50%";
       dialog.style.left = "50%";
+      dialog.style.margin = "0";
     }
     setTimeout(() => {
       dialog.style.visibility = "";

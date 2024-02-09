@@ -638,9 +638,12 @@ export class Revelio {
     const dialogSpaceHeight = dialogBoundingRect.height + dialogMargin * 2;
 
     // get dialog top and left position, take into account the dialog does not overflow the root element
-    const rootElementRect = this._rootElement.getBoundingClientRect();
-    const rootElementWidth = rootElementRect.width;
-    const rootElementHeight = rootElementRect.height;
+    const viewportLeft = window.scrollX || window.pageXOffset;
+    const viewportTop = window.scrollY || window.pageYOffset;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const viewportBottom = viewportTop + viewportHeight;
+    const viewportRight = viewportLeft + viewportWidth;
     let currentPlacement: RevelioOptions['placement'] | undefined;
 
     const getDialogPosition = (
@@ -656,8 +659,8 @@ export class Revelio {
       }
 
       if (currentPlacement === 'center') {
-        dialogLeft = rootElementWidth / 2 - dialogSpaceWidth / 2;
-        dialogTop = rootElementHeight / 2 - dialogSpaceHeight / 2;
+        dialogLeft = viewportWidth / 2 - dialogSpaceWidth / 2;
+        dialogTop = viewportHeight / 2 - dialogSpaceHeight / 2;
       } else {
         if (!elementPosition || !elementDimensions) {
           throw this._createError(
@@ -676,7 +679,7 @@ export class Revelio {
             dialogTop = elementYCenter - dialogSpaceHeight / 2;
 
             // get potential overlap
-            if (dialogLeft < rootElementRect.left) {
+            if (dialogLeft < viewportLeft) {
               // will overlap with element as there is no space to the left
               if (placementArray.length > 0) {
                 return getDialogPosition(placementArray);
@@ -689,7 +692,7 @@ export class Revelio {
             dialogTop = elementYCenter - dialogSpaceHeight / 2;
 
             // get potential overlap
-            if (dialogLeft + dialogSpaceWidth > rootElementRect.right) {
+            if (dialogLeft + dialogSpaceWidth > viewportRight) {
               // will overlap with element as there is no space to the right
               if (placementArray.length > 0) {
                 return getDialogPosition(placementArray);
@@ -702,7 +705,7 @@ export class Revelio {
             dialogTop = elementPosition.top - dialogSpaceHeight;
 
             // get potential overlap
-            if (dialogTop < rootElementRect.top) {
+            if (dialogTop < viewportTop) {
               // will overlap with element as there is no space above
               if (placementArray.length > 0) {
                 return getDialogPosition(placementArray);
@@ -716,7 +719,7 @@ export class Revelio {
             dialogTop = elementPosition.top + elementDimensions.height;
 
             // get potential overlap
-            if (dialogTop + dialogSpaceHeight > rootElementRect.bottom) {
+            if (dialogTop + dialogSpaceHeight > viewportBottom) {
               // will overlap with element as there is no space below
               if (placementArray.length > 0) {
                 return getDialogPosition(placementArray);
@@ -737,17 +740,18 @@ export class Revelio {
 
     const { dialogLeft, dialogTop } = getDialogPosition(placementArray);
 
-    dialog.style.top = `clamp(0px, ${dialogTop}px, ${
-      rootElementHeight - dialogSpaceHeight
+    dialog.style.top = `clamp(${viewportTop}px, ${dialogTop}px, ${
+      viewportBottom - dialogSpaceHeight
     }px)`;
-    dialog.style.left = `clamp(0px, ${dialogLeft}px, ${
-      rootElementWidth - dialogSpaceWidth
-    }px)`;
+    dialog.style.left = `clamp(${viewportLeft}px,
+    ${dialogLeft}px, ${viewportRight - dialogSpaceWidth}px)`;
 
     if (currentPlacement === 'center' && this._rootElement === document.body) {
+      dialog.style.position = 'fixed';
       dialog.style.transform = 'translate(-50%, -50%)';
       dialog.style.top = '50%';
       dialog.style.left = '50%';
+      dialog.style.margin = '0';
     }
     // Set CSS to make it visible
     setTimeout(() => {
