@@ -1032,30 +1032,38 @@ export class Revelio {
       ) {
         // get all the children of the ancestorElement
         const children = ancestorElement.children;
+        // if no children, add the opacity
+        if (!children.length) {
+          return ancestorElement.classList.add(
+            revelioElementAncestorWithOpacityClass,
+          );
+        }
         for (let i = 0; i < children.length; i++) {
           const child = children[i];
           if (
             child instanceof HTMLElement &&
             child !== highlightedElement &&
-            !child.id.match(/revelio-overlay/)
+            !child.id.match(/revelio-overlay/) &&
+            !stackingContextAncestorElements.some(
+              (ancestor) => ancestor === child,
+            )
           ) {
             const childComputedStyle = window.getComputedStyle(child);
-            if (!child.contains(highlightedElement)) {
-              if (childComputedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)') {
-                // the child has a background color, so we will apply an overlay to reduce its visibility
-                if (childComputedStyle.position === 'static') {
-                  // this class is for the overlay to work in a relative positioned element
-                  child.classList.add(revelioElementAncestorWithOverlayClass);
-                }
-                revelioInstance._addOverlayInsideElement(
-                  child,
-                  `ancestor-sibling-${i}`,
-                );
-              } else {
-                child.classList.add(revelioElementAncestorWithOpacityClass);
+            if (
+              !child.contains(highlightedElement) &&
+              childComputedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)'
+            ) {
+              // the child has a background color, so we will apply an overlay to reduce its visibility
+              if (childComputedStyle.position === 'static') {
+                // this class is for the overlay to work in a relative positioned element
+                child.classList.add(revelioElementAncestorWithOverlayClass);
               }
+              revelioInstance._addOverlayInsideElement(
+                child,
+                `ancestor-sibling-${i}`,
+              );
             } else {
-              // continue checking the children of the child
+              // continue checking the children
               addOverlayToSiblingsWithoutHighlightedElement(
                 child,
                 revelioInstance,
@@ -1065,12 +1073,17 @@ export class Revelio {
         }
       }
 
+      const stackingContextAncestorElements = await Promise.all(
+        this._stackingContextAncestors.map(async (ancestor) => {
+          return await this._getElement(ancestor.element);
+        }),
+      );
+
       await Promise.all(
         this._stackingContextAncestors.map(async (ancestor, idx) => {
           // get the stacking context ancestors elements
-          const stackingContextAncestorElement = await this._getElement(
-            ancestor.element,
-          );
+          const stackingContextAncestorElement =
+            stackingContextAncestorElements[idx]!;
 
           ancestor.originalStyles = { ...stackingContextAncestorElement.style };
 
@@ -1081,7 +1094,6 @@ export class Revelio {
           if (ancestorElementComputedStyle.position === 'static') {
             stackingContextAncestorElement.style.position = 'relative';
           }
-
           this._addOverlayInsideElement(
             stackingContextAncestorElement,
             `ancestor-${idx}`,

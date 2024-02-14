@@ -538,19 +538,18 @@ class Revelio {
     if (this._stackingContextAncestors) {
       let addOverlayToSiblingsWithoutHighlightedElement = function(ancestorElement, revelioInstance) {
         const children = ancestorElement.children;
+        if (!children.length) {
+          return ancestorElement.classList.add(revelioElementAncestorWithOpacityClass);
+        }
         for (let i = 0;i < children.length; i++) {
           const child = children[i];
-          if (child instanceof HTMLElement && child !== highlightedElement && !child.id.match(/revelio-overlay/)) {
+          if (child instanceof HTMLElement && child !== highlightedElement && !child.id.match(/revelio-overlay/) && !stackingContextAncestorElements.some((ancestor) => ancestor === child)) {
             const childComputedStyle = window.getComputedStyle(child);
-            if (!child.contains(highlightedElement)) {
-              if (childComputedStyle.backgroundColor !== "rgba(0, 0, 0, 0)") {
-                if (childComputedStyle.position === "static") {
-                  child.classList.add(revelioElementAncestorWithOverlayClass);
-                }
-                revelioInstance._addOverlayInsideElement(child, `ancestor-sibling-${i}`);
-              } else {
-                child.classList.add(revelioElementAncestorWithOpacityClass);
+            if (!child.contains(highlightedElement) && childComputedStyle.backgroundColor !== "rgba(0, 0, 0, 0)") {
+              if (childComputedStyle.position === "static") {
+                child.classList.add(revelioElementAncestorWithOverlayClass);
               }
+              revelioInstance._addOverlayInsideElement(child, `ancestor-sibling-${i}`);
             } else {
               addOverlayToSiblingsWithoutHighlightedElement(child, revelioInstance);
             }
@@ -567,8 +566,11 @@ class Revelio {
         `;
         document.head.prepend(style);
       }
+      const stackingContextAncestorElements = await Promise.all(this._stackingContextAncestors.map(async (ancestor) => {
+        return await this._getElement(ancestor.element);
+      }));
       await Promise.all(this._stackingContextAncestors.map(async (ancestor, idx) => {
-        const stackingContextAncestorElement = await this._getElement(ancestor.element);
+        const stackingContextAncestorElement = stackingContextAncestorElements[idx];
         ancestor.originalStyles = { ...stackingContextAncestorElement.style };
         stackingContextAncestorElement.style.zIndex = `calc(var(--revelio-z-index) + ${idx} + 1)`;
         const ancestorElementComputedStyle = window.getComputedStyle(stackingContextAncestorElement);
