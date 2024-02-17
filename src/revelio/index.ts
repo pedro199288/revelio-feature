@@ -4,7 +4,7 @@ import { arrayFromClassesString, getNumberFromString } from '../utils';
 /**
  * Config that is shared between the 'options' and 'journey.[].options' properties
  */
-type RevelioSharedConfig = {
+export type RevelioSharedConfig = {
   rootElement: string | HTMLElement;
 
   /**
@@ -213,14 +213,14 @@ type RevelioSharedConfig = {
 /**
  * Options passed to the Revelio constructor
  */
-type RevelioOptions = RevelioSharedConfig & {
+export type RevelioOptions = RevelioSharedConfig & {
   overlayColor: string;
 };
 
 /**
  * Journey passed to the Revelio constructor
  */
-type JourneyStep = {
+export type JourneyStep = {
   /**
    * The element to highlight. Can be a query selector or an HTMLElement.
    */
@@ -1178,8 +1178,12 @@ export class Revelio {
    */
   private async _awaitAnimatedElements() {
     if (this._animatedElements.length > 0) {
+      let iteratingSelector: string | HTMLElement | undefined;
       const animatedElementsStillAnimatingPromises = this._animatedElements
-        .map((selector) => this._getElement(selector))
+        .map((selector) => {
+          iteratingSelector = selector;
+          return this._getElement(selector);
+        })
         .filter(async (element) => {
           const { animationPlayState, transitionProperty } =
             window.getComputedStyle(await element);
@@ -1190,6 +1194,7 @@ export class Revelio {
         .map(
           (element) =>
             new Promise<void>(async (resolve) => {
+              let resolved = false;
               element.then((element) => {
                 const animationEndHandler = () => {
                   element.removeEventListener(
@@ -1200,10 +1205,23 @@ export class Revelio {
                     'transitionend',
                     animationEndHandler,
                   );
+                  if (resolved) return;
+                  resolved = true;
                   resolve();
                 };
                 element.addEventListener('animationend', animationEndHandler);
                 element.addEventListener('transitionend', animationEndHandler);
+
+                // fallback resolution in case the event is not triggered
+                setTimeout(() => {
+                  if (resolved) return;
+                  resolved = true;
+                  console.warn(
+                    `A timeout was triggered to resolve the promise, the animation last too long or the 
+                    found element with selector ${iteratingSelector?.toString()} is not animating`,
+                  );
+                  resolve();
+                }, 5000);
               });
             }),
         );
@@ -1563,5 +1581,3 @@ export class Revelio {
     await this._onPrevAfter?.();
   }
 }
-
-export default Revelio;

@@ -1,7 +1,7 @@
 /**
  * Config that is shared between the 'options' and 'journey.[].options' properties
  */
-type RevelioSharedConfig = {
+export type RevelioSharedConfig = {
     rootElement: string | HTMLElement;
     /**
      * The placement of the feature tour step. Can be 'top', 'bottom', 'left', 'right' or 'center'.
@@ -171,13 +171,13 @@ type RevelioSharedConfig = {
 /**
  * Options passed to the Revelio constructor
  */
-type RevelioOptions = RevelioSharedConfig & {
+export type RevelioOptions = RevelioSharedConfig & {
     overlayColor: string;
 };
 /**
  * Journey passed to the Revelio constructor
  */
-type JourneyStep = {
+export type JourneyStep = {
     /**
      * The element to highlight. Can be a query selector or an HTMLElement.
      */
@@ -344,4 +344,3 @@ export declare class Revelio {
     private _boundNextStep;
     prevStep(): Promise<void>;
 }
-export default Revelio;

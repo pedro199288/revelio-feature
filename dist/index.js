@@ -631,18 +631,34 @@ class Revelio {
   }
   async _awaitAnimatedElements() {
     if (this._animatedElements.length > 0) {
-      const animatedElementsStillAnimatingPromises = this._animatedElements.map((selector) => this._getElement(selector)).filter(async (element) => {
+      let iteratingSelector;
+      const animatedElementsStillAnimatingPromises = this._animatedElements.map((selector) => {
+        iteratingSelector = selector;
+        return this._getElement(selector);
+      }).filter(async (element) => {
         const { animationPlayState, transitionProperty } = window.getComputedStyle(await element);
         return animationPlayState === "running" || transitionProperty !== "none";
       }).map((element) => new Promise(async (resolve) => {
+        let resolved = false;
         element.then((element2) => {
           const animationEndHandler = () => {
             element2.removeEventListener("animationend", animationEndHandler);
             element2.removeEventListener("transitionend", animationEndHandler);
+            if (resolved)
+              return;
+            resolved = true;
             resolve();
           };
           element2.addEventListener("animationend", animationEndHandler);
           element2.addEventListener("transitionend", animationEndHandler);
+          setTimeout(() => {
+            if (resolved)
+              return;
+            resolved = true;
+            console.warn(`A timeout was triggered to resolve the promise, the animation last too long or the 
+                    found element with selector ${iteratingSelector?.toString()} is not animating`);
+            resolve();
+          }, 5000);
         });
       }));
       if (animatedElementsStillAnimatingPromises.length > 0) {
@@ -894,7 +910,6 @@ class Revelio {
     await this._onPrevAfter?.();
   }
 }
-var revelio_default = Revelio;
 export {
-  revelio_default as Revelio
+  Revelio
 };
