@@ -13,6 +13,12 @@ export type RevelioSharedConfig = {
   placement: 'top' | 'bottom' | 'left' | 'right' | 'center';
 
   /**
+   * The dialog will default to the center of the screen if the dialog doesn't fit with
+   * any placement into the viewport.
+   */
+  fallbackPlacementToCenter: boolean;
+
+  /**
    * Determines whether the step dialog should be scrolled into view.
    */
   preventScrollIntoView: boolean;
@@ -242,6 +248,7 @@ export type JourneyStep = {
 const defaultOptions: RevelioOptions = {
   rootElement: document.body,
   placement: 'bottom',
+  fallbackPlacementToCenter: false,
   preventScrollIntoView: false,
   stackingContextAncestors: undefined,
   disableBlink: false,
@@ -300,6 +307,8 @@ export class Revelio {
   private _currentIndex: number;
 
   private _placement: RevelioOptions['placement'] = defaultOptions.placement;
+  private _fallbackPlacementToCenter: RevelioOptions['fallbackPlacementToCenter'] =
+    defaultOptions.fallbackPlacementToCenter;
   private _preventScrollIntoView: RevelioOptions['preventScrollIntoView'] =
     defaultOptions.preventScrollIntoView;
   private _stackingContextAncestors?: {
@@ -482,6 +491,9 @@ export class Revelio {
     );
     this._rootElement = rootElement;
     this._placement = stepOptions?.placement ?? this._baseConfig.placement;
+    this._fallbackPlacementToCenter =
+      stepOptions?.fallbackPlacementToCenter ??
+      this._baseConfig.fallbackPlacementToCenter;
     this._preventScrollIntoView =
       stepOptions?.preventScrollIntoView ??
       this._baseConfig.preventScrollIntoView;
@@ -615,14 +627,38 @@ export class Revelio {
   ): RevelioOptions['placement'][] {
     switch (placement) {
       case 'left':
-        return ['left', 'right', 'top', 'bottom', 'center'];
+        return [
+          'left',
+          'right',
+          'top',
+          'bottom',
+          this._fallbackPlacementToCenter ? 'center' : 'left',
+        ];
       case 'right':
-        return ['right', 'left', 'bottom', 'top', 'center'];
+        return [
+          'right',
+          'left',
+          'bottom',
+          'top',
+          this._fallbackPlacementToCenter ? 'center' : 'right',
+        ];
       case 'top':
-        return ['top', 'bottom', 'left', 'right', 'center'];
+        return [
+          'top',
+          'bottom',
+          'left',
+          'right',
+          this._fallbackPlacementToCenter ? 'center' : 'top',
+        ];
       case 'bottom':
       default:
-        return ['bottom', 'top', 'right', 'left', 'center'];
+        return [
+          'bottom',
+          'top',
+          'right',
+          'left',
+          this._fallbackPlacementToCenter ? 'center' : 'bottom',
+        ];
       case 'center':
         return ['center'];
     }

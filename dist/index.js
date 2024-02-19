@@ -10,6 +10,7 @@ var getNumberFromString = function(string) {
 var defaultOptions = {
   rootElement: document.body,
   placement: "bottom",
+  fallbackPlacementToCenter: false,
   preventScrollIntoView: false,
   stackingContextAncestors: undefined,
   disableBlink: false,
@@ -49,6 +50,7 @@ class Revelio {
   _initialJourney;
   _currentIndex;
   _placement = defaultOptions.placement;
+  _fallbackPlacementToCenter = defaultOptions.fallbackPlacementToCenter;
   _preventScrollIntoView = defaultOptions.preventScrollIntoView;
   _stackingContextAncestors = defaultOptions.stackingContextAncestors?.map((element) => ({
     element,
@@ -164,6 +166,7 @@ class Revelio {
     const rootElement = await this._getElement(stepOptions?.rootElement ?? this._baseConfig.rootElement);
     this._rootElement = rootElement;
     this._placement = stepOptions?.placement ?? this._baseConfig.placement;
+    this._fallbackPlacementToCenter = stepOptions?.fallbackPlacementToCenter ?? this._baseConfig.fallbackPlacementToCenter;
     this._preventScrollIntoView = stepOptions?.preventScrollIntoView ?? this._baseConfig.preventScrollIntoView;
     const stackingContextAncestors = stepOptions?.stackingContextAncestors ?? this._baseConfig.stackingContextAncestors;
     this._stackingContextAncestors = stackingContextAncestors?.map((element) => ({
@@ -236,14 +239,38 @@ class Revelio {
   _getPlacementArray(placement) {
     switch (placement) {
       case "left":
-        return ["left", "right", "top", "bottom", "center"];
+        return [
+          "left",
+          "right",
+          "top",
+          "bottom",
+          this._fallbackPlacementToCenter ? "center" : "left"
+        ];
       case "right":
-        return ["right", "left", "bottom", "top", "center"];
+        return [
+          "right",
+          "left",
+          "bottom",
+          "top",
+          this._fallbackPlacementToCenter ? "center" : "right"
+        ];
       case "top":
-        return ["top", "bottom", "left", "right", "center"];
+        return [
+          "top",
+          "bottom",
+          "left",
+          "right",
+          this._fallbackPlacementToCenter ? "center" : "top"
+        ];
       case "bottom":
       default:
-        return ["bottom", "top", "right", "left", "center"];
+        return [
+          "bottom",
+          "top",
+          "right",
+          "left",
+          this._fallbackPlacementToCenter ? "center" : "bottom"
+        ];
       case "center":
         return ["center"];
     }
