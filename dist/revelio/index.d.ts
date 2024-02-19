@@ -8,6 +8,11 @@ export type RevelioSharedConfig = {
      */
     placement: 'top' | 'bottom' | 'left' | 'right' | 'center';
     /**
+     * The dialog will default to the center of the screen if the dialog doesn't fit with
+     * any placement into the viewport.
+     */
+    fallbackPlacementToCenter: boolean;
+    /**
      * Determines whether the step dialog should be scrolled into view.
      */
     preventScrollIntoView: boolean;
@@ -218,6 +223,7 @@ export declare class Revelio {
      */
     private _currentIndex;
     private _placement;
+    private _fallbackPlacementToCenter;
     private _preventScrollIntoView;
     private _stackingContextAncestors?;
     private _disableBlink;
