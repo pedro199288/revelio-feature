@@ -24,13 +24,6 @@ export type RevelioSharedConfig = {
   preventScrollIntoView: boolean;
 
   /**
-   * The stacking context ancestors of the element, if any. This is useful when the element is inside a stacking context.
-   * This ensures that all the ancestors are placed above the overlay so the element is properly highlighted.
-   * TODO: explain this better in docs
-   */
-  stackingContextAncestors: (string | HTMLElement)[] | undefined;
-
-  /**
    * If true, disables blinking the element for the current step.
    */
   disableBlink: boolean;
@@ -250,7 +243,6 @@ const defaultOptions: RevelioOptions = {
   placement: 'bottom',
   fallbackPlacementToCenter: false,
   preventScrollIntoView: false,
-  stackingContextAncestors: undefined,
   disableBlink: false,
   persistBlink: false,
   disableClick: false,
@@ -278,10 +270,6 @@ const defaultOptions: RevelioOptions = {
 
 const zIndexValue = '10000';
 const zIndexOverlayValue = '9999';
-const revelioElementAncestorWithOverlayClass =
-  'revelio-element-ancestor-with-overlay';
-const revelioElementAncestorWithOpacityClass =
-  'revelio-element-ancestor-with-opacity';
 
 export class Revelio {
   private static _started: boolean;
@@ -311,13 +299,6 @@ export class Revelio {
     defaultOptions.fallbackPlacementToCenter;
   private _preventScrollIntoView: RevelioOptions['preventScrollIntoView'] =
     defaultOptions.preventScrollIntoView;
-  private _stackingContextAncestors?: {
-    element: string | HTMLElement;
-    originalStyles?: CSSStyleDeclaration;
-  }[] = defaultOptions.stackingContextAncestors?.map((element) => ({
-    element: element,
-    originalStyles: undefined,
-  }));
   private _disableBlink: RevelioOptions['disableBlink'] =
     defaultOptions.disableBlink;
   private _persistBlink: RevelioOptions['persistBlink'] =
@@ -497,15 +478,6 @@ export class Revelio {
     this._preventScrollIntoView =
       stepOptions?.preventScrollIntoView ??
       this._baseConfig.preventScrollIntoView;
-    const stackingContextAncestors =
-      stepOptions?.stackingContextAncestors ??
-      this._baseConfig.stackingContextAncestors;
-    this._stackingContextAncestors = stackingContextAncestors?.map(
-      (element) => ({
-        element: element,
-        originalStyles: undefined,
-      }),
-    );
     this._disableBlink =
       stepOptions?.disableBlink ?? this._baseConfig.disableBlink;
     this._persistBlink =
@@ -1025,182 +997,6 @@ export class Revelio {
     );
   }
 
-  private _addOverlayInsideElement(element: HTMLElement, id: string) {
-    const elementComputedStyle = window.getComputedStyle(element);
-    const overlay = document.createElement('div');
-    overlay.id = `revelio-overlay-${id}`;
-    overlay.style.position = 'absolute';
-    overlay.style.top = `calc(0px - ${elementComputedStyle.borderWidth})`;
-    overlay.style.left = `calc(0px - ${elementComputedStyle.borderWidth})`;
-    overlay.style.width = `calc(${elementComputedStyle.width} )`;
-    overlay.style.height = `calc(${elementComputedStyle.height} )`;
-    if (elementComputedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)') {
-      overlay.style.backgroundColor = this._baseConfig.overlayColor;
-    }
-    overlay.style.border = elementComputedStyle.border;
-    overlay.style.borderRadius = elementComputedStyle.borderRadius;
-    overlay.style.borderColor = this._baseConfig.overlayColor;
-    overlay.style.zIndex = `calc(var(--revelio-z-index) + 1)`;
-    overlay.onclick = this.skipTour.bind(this);
-    element.appendChild(overlay);
-  }
-
-  private async _createStackedContextsOverlays(
-    highlightedElement: HTMLElement,
-  ) {
-    if (this._stackingContextAncestors) {
-      if (!document.querySelector('#revelio-overlay-ancestor-style')) {
-        const style = document.createElement('style');
-        style.setAttribute('type', 'text/css');
-        style.id = 'revelio-overlay-ancestor-style';
-        style.innerHTML = `
-          .${revelioElementAncestorWithOverlayClass} { position: relative; }
-          .${revelioElementAncestorWithOpacityClass} { opacity: 0.2; }
-        `;
-        // NOTE: the opacity doesn't reduce the vissibility as an overlay but is good enough to indicate that the element is not the highlighted one
-        // prepend so other styles can override this one
-        document.head.prepend(style);
-      }
-
-      function addOverlayToSiblingsWithoutHighlightedElement(
-        ancestorElement: HTMLElement,
-        revelioInstance: Revelio,
-      ) {
-        // get all the children of the ancestorElement
-        const children = ancestorElement.children;
-        // if no children, add the opacity
-        if (!children.length) {
-          return ancestorElement.classList.add(
-            revelioElementAncestorWithOpacityClass,
-          );
-        }
-        for (let i = 0; i < children.length; i++) {
-          const child = children[i];
-          if (
-            child instanceof HTMLElement &&
-            child !== highlightedElement &&
-            !child.id.match(/revelio-overlay/) &&
-            !stackingContextAncestorElements.some(
-              (ancestor) => ancestor === child,
-            )
-          ) {
-            const childComputedStyle = window.getComputedStyle(child);
-            if (
-              !child.contains(highlightedElement) &&
-              childComputedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)'
-            ) {
-              // the child has a background color, so we will apply an overlay to reduce its visibility
-              if (childComputedStyle.position === 'static') {
-                // this class is for the overlay to work in a relative positioned element
-                child.classList.add(revelioElementAncestorWithOverlayClass);
-              }
-              revelioInstance._addOverlayInsideElement(
-                child,
-                `ancestor-sibling-${i}`,
-              );
-            } else {
-              // continue checking the children
-              addOverlayToSiblingsWithoutHighlightedElement(
-                child,
-                revelioInstance,
-              );
-            }
-          }
-        }
-      }
-
-      const stackingContextAncestorElements = await Promise.all(
-        this._stackingContextAncestors.map(async (ancestor) => {
-          return await this._getElement(ancestor.element);
-        }),
-      );
-
-      await Promise.all(
-        this._stackingContextAncestors.map(async (ancestor, idx) => {
-          // get the stacking context ancestors elements
-          const stackingContextAncestorElement =
-            stackingContextAncestorElements[idx]!;
-
-          ancestor.originalStyles = { ...stackingContextAncestorElement.style };
-
-          stackingContextAncestorElement.style.zIndex = `calc(var(--revelio-z-index) + ${idx} + 1)`;
-          const ancestorElementComputedStyle = window.getComputedStyle(
-            stackingContextAncestorElement,
-          );
-          if (ancestorElementComputedStyle.position === 'static') {
-            stackingContextAncestorElement.style.position = 'relative';
-          }
-          this._addOverlayInsideElement(
-            stackingContextAncestorElement,
-            `ancestor-${idx}`,
-          );
-          if (
-            // this means that the background is transparent
-            ancestorElementComputedStyle.backgroundColor === 'rgba(0, 0, 0, 0)'
-          ) {
-            addOverlayToSiblingsWithoutHighlightedElement(
-              stackingContextAncestorElement,
-              this,
-            );
-          }
-        }),
-      );
-    }
-  }
-
-  private async _highlightStepElement(element: HTMLElement) {
-    await this._createStackedContextsOverlays(element);
-
-    const elementComputedStyle = window.getComputedStyle(element);
-    element.style.zIndex = (
-      +zIndexOverlayValue +
-      (this._stackingContextAncestors?.length ?? 0) +
-      1
-    ).toString();
-    if (elementComputedStyle.position === 'static') {
-      element.style.position = 'relative';
-    }
-    if (this._disableClick) {
-      element.style.pointerEvents = 'none';
-    }
-    if (this._goNextOnClick) {
-      element.addEventListener('click', this._boundNextStep);
-    }
-
-    // get the position and dimensions
-    const elementRect = element.getBoundingClientRect();
-    const rootRect = this._rootElement.getBoundingClientRect();
-    const top = elementRect.top - rootRect.top;
-    const left = elementRect.left - rootRect.left;
-    const { width, height } = elementRect;
-
-    if (!this._disableBlink) {
-      this._createBlinkOverlay(element, top, left, width, height);
-    }
-
-    return {
-      position: {
-        top,
-        left,
-      },
-      dimensions: {
-        width,
-        height,
-      },
-    };
-  }
-
-  /**
-   * Returns the step for the given index, or the current step if no index is provided
-   */
-  private _getStep(index: number = this._currentIndex) {
-    const step = this._journey[index];
-    if (!step) {
-      throw this._createError(`Step ${index} not found`);
-    }
-    return step;
-  }
-
   private _scrollStartHandler = () => {};
 
   private async _highlightAndRenderDialog(stepElement: HTMLElement) {
@@ -1434,88 +1230,24 @@ export class Revelio {
     }
   }
 
-  private async _removeStackingContextAncestorsOverlays() {
-    if (this._stackingContextAncestors) {
-      function removeWithOverlayClassFromSiblingsWithoutHighlightedElement(
-        ancestorElement: HTMLElement,
-      ) {
-        // get all the children of the ancestorElement
-        const children = ancestorElement.children;
-        for (let i = 0; i < children.length; i++) {
-          const child = children[i];
-          if (child instanceof HTMLElement) {
-            child.classList.remove(revelioElementAncestorWithOverlayClass);
-            child.classList.remove(revelioElementAncestorWithOpacityClass);
-            removeWithOverlayClassFromSiblingsWithoutHighlightedElement(child);
-          }
-        }
-      }
-      await Promise.all(
-        this._stackingContextAncestors.map(async (ancestor) => {
-          const stackingContextAncestorElement = await this._getElement(
-            ancestor.element,
-          );
-          const ancestorElementComputedStyle = window.getComputedStyle(
-            stackingContextAncestorElement,
-          );
-          if (
-            ancestorElementComputedStyle.backgroundColor === 'rgba(0, 0, 0, 0)'
-          ) {
-            removeWithOverlayClassFromSiblingsWithoutHighlightedElement(
-              stackingContextAncestorElement,
-            );
-            document.head
-              .querySelector('#revelio-overlay-ancestor-style')
-              ?.remove();
-          }
-          stackingContextAncestorElement.style.zIndex =
-            ancestor.originalStyles?.zIndex ?? '';
-          stackingContextAncestorElement.style.position =
-            ancestor.originalStyles?.position ?? '';
-          if (!stackingContextAncestorElement.getAttribute('style')?.trim()) {
-            stackingContextAncestorElement.removeAttribute('style');
-          }
-
-          // remove all overlays
-          document
-            .querySelectorAll(`[id^="revelio-overlay-"]`)
-            .forEach((overlay) => {
-              const overlayParent = overlay.parentElement;
-              if (overlayParent) {
-                overlayParent.removeChild(overlay);
-              }
-            });
-        }),
-      );
-    }
-  }
-
   private async _unmountStep() {
     const step = this._getStep();
 
     if (step.element !== undefined) {
-      const element = await this._getElement(step.element);
-
-      element.style.zIndex = '';
-      element.style.position = '';
-      if (this._disableClick) {
-        element.style.pointerEvents = '';
-      }
-
-      if (!element.getAttribute('style')?.trim()) {
-        element.removeAttribute('style');
+      const overlay = document.querySelector('#revelio-overlay');
+      if (overlay) {
+        overlay.remove();
       }
 
       if (this._goNextOnClick) {
+        const element = await this._getElement(step.element);
         element.removeEventListener('click', this._boundNextStep);
       }
-      this._unmountBlinkOverlay();
     }
+
     this._unmountDialog();
 
-    await this._removeStackingContextAncestorsOverlays();
-
-    // remove scroll listener if any
+    // Remove scroll listener if any
     window.removeEventListener('scroll', this._scrollStartHandler, {
       capture: true,
     });
@@ -1615,5 +1347,85 @@ export class Revelio {
     this._transitionBlocked = false;
 
     await this._onPrevAfter?.();
+  }
+
+  /**
+   * Returns the step for the given index, or the current step if no index is provided
+   */
+  private _getStep(index: number = this._currentIndex) {
+    const step = this._journey[index];
+    if (!step) {
+      throw this._createError(`Step ${index} not found`);
+    }
+    return step;
+  }
+
+  private async _highlightStepElement(element: HTMLElement) {
+    const overlay = document.createElement('div');
+    overlay.id = 'revelio-overlay';
+
+    const rect = element.getBoundingClientRect();
+    const rootRect = this._rootElement.getBoundingClientRect();
+
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      display: grid;
+      z-index: ${zIndexOverlayValue};
+      grid-template: 
+        "top    top    top"    ${rect.top - rootRect.top}px
+        "left   focus  right"  ${rect.height}px
+        "bottom bottom bottom" 1fr
+        / ${rect.left - rootRect.left}px ${rect.width}px 1fr;
+    `;
+
+    const mask = document.createElement('div');
+    mask.style.cssText = `
+      grid-area: 1 / 1 / 4 / 4;
+      background: ${this._baseConfig.overlayColor};
+      pointer-events: auto;
+    `;
+    mask.onclick = this.skipTour.bind(this);
+
+    const highlight = document.createElement('div');
+    highlight.style.cssText = `
+      grid-area: focus;
+      box-shadow: 0 0 0 2px white;
+      pointer-events: ${this._disableClick ? 'none' : 'auto'};
+      ${!this._disableBlink ? 'animation: revelio-blink 1s ease-in' : ''};
+      ${this._persistBlink ? 'animation-iteration-count: infinite' : '1'};
+    `;
+
+    if (this._goNextOnClick) {
+      highlight.addEventListener('click', this._boundNextStep);
+    }
+
+    overlay.append(mask, highlight);
+    this._rootElement.appendChild(overlay);
+
+    // Add blink animation styles if not already present
+    if (!document.querySelector('#revelio-styles')) {
+      const style = document.createElement('style');
+      style.id = 'revelio-styles';
+      style.textContent = `
+        @keyframes revelio-blink {
+          0% { opacity: 0; }
+          50% { opacity: 0.3; }
+          100% { opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    return {
+      position: {
+        top: rect.top - rootRect.top,
+        left: rect.left - rootRect.left,
+      },
+      dimensions: {
+        width: rect.width,
+        height: rect.height,
+      },
+    };
   }
 }

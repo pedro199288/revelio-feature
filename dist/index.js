@@ -1,10 +1,10 @@
 // src/utils.ts
-var arrayFromClassesString = function(classString) {
+function arrayFromClassesString(classString) {
   return classString.split(" ").map((c) => c.trim()).filter(Boolean);
-};
-var getNumberFromString = function(string) {
+}
+function getNumberFromString(string) {
   return Number(string.replace(/[^0-9]/g, ""));
-};
+}
 
 // src/revelio/index.ts
 var defaultOptions = {
@@ -12,7 +12,6 @@ var defaultOptions = {
   placement: "bottom",
   fallbackPlacementToCenter: false,
   preventScrollIntoView: false,
-  stackingContextAncestors: undefined,
   disableBlink: false,
   persistBlink: false,
   disableClick: false,
@@ -39,8 +38,6 @@ var defaultOptions = {
 };
 var zIndexValue = "10000";
 var zIndexOverlayValue = "9999";
-var revelioElementAncestorWithOverlayClass = "revelio-element-ancestor-with-overlay";
-var revelioElementAncestorWithOpacityClass = "revelio-element-ancestor-with-opacity";
 
 class Revelio {
   static _started;
@@ -52,10 +49,6 @@ class Revelio {
   _placement = defaultOptions.placement;
   _fallbackPlacementToCenter = defaultOptions.fallbackPlacementToCenter;
   _preventScrollIntoView = defaultOptions.preventScrollIntoView;
-  _stackingContextAncestors = defaultOptions.stackingContextAncestors?.map((element) => ({
-    element,
-    originalStyles: undefined
-  }));
   _disableBlink = defaultOptions.disableBlink;
   _persistBlink = defaultOptions.persistBlink;
   _disableClick = defaultOptions.disableClick;
@@ -168,11 +161,6 @@ class Revelio {
     this._placement = stepOptions?.placement ?? this._baseConfig.placement;
     this._fallbackPlacementToCenter = stepOptions?.fallbackPlacementToCenter ?? this._baseConfig.fallbackPlacementToCenter;
     this._preventScrollIntoView = stepOptions?.preventScrollIntoView ?? this._baseConfig.preventScrollIntoView;
-    const stackingContextAncestors = stepOptions?.stackingContextAncestors ?? this._baseConfig.stackingContextAncestors;
-    this._stackingContextAncestors = stackingContextAncestors?.map((element) => ({
-      element,
-      originalStyles: undefined
-    }));
     this._disableBlink = stepOptions?.disableBlink ?? this._baseConfig.disableBlink;
     this._persistBlink = stepOptions?.persistBlink ?? this._baseConfig.persistBlink;
     this._disableClick = stepOptions?.disableClick ?? this._baseConfig.disableClick;
@@ -542,114 +530,6 @@ class Revelio {
       easing: "ease-in"
     });
   }
-  _addOverlayInsideElement(element, id) {
-    const elementComputedStyle = window.getComputedStyle(element);
-    const overlay = document.createElement("div");
-    overlay.id = `revelio-overlay-${id}`;
-    overlay.style.position = "absolute";
-    overlay.style.top = `calc(0px - ${elementComputedStyle.borderWidth})`;
-    overlay.style.left = `calc(0px - ${elementComputedStyle.borderWidth})`;
-    overlay.style.width = `calc(${elementComputedStyle.width} )`;
-    overlay.style.height = `calc(${elementComputedStyle.height} )`;
-    if (elementComputedStyle.backgroundColor !== "rgba(0, 0, 0, 0)") {
-      overlay.style.backgroundColor = this._baseConfig.overlayColor;
-    }
-    overlay.style.border = elementComputedStyle.border;
-    overlay.style.borderRadius = elementComputedStyle.borderRadius;
-    overlay.style.borderColor = this._baseConfig.overlayColor;
-    overlay.style.zIndex = `calc(var(--revelio-z-index) + 1)`;
-    overlay.onclick = this.skipTour.bind(this);
-    element.appendChild(overlay);
-  }
-  async _createStackedContextsOverlays(highlightedElement) {
-    if (this._stackingContextAncestors) {
-      let addOverlayToSiblingsWithoutHighlightedElement = function(ancestorElement, revelioInstance) {
-        const children = ancestorElement.children;
-        if (!children.length) {
-          return ancestorElement.classList.add(revelioElementAncestorWithOpacityClass);
-        }
-        for (let i = 0;i < children.length; i++) {
-          const child = children[i];
-          if (child instanceof HTMLElement && child !== highlightedElement && !child.id.match(/revelio-overlay/) && !stackingContextAncestorElements.some((ancestor) => ancestor === child)) {
-            const childComputedStyle = window.getComputedStyle(child);
-            if (!child.contains(highlightedElement) && childComputedStyle.backgroundColor !== "rgba(0, 0, 0, 0)") {
-              if (childComputedStyle.position === "static") {
-                child.classList.add(revelioElementAncestorWithOverlayClass);
-              }
-              revelioInstance._addOverlayInsideElement(child, `ancestor-sibling-${i}`);
-            } else {
-              addOverlayToSiblingsWithoutHighlightedElement(child, revelioInstance);
-            }
-          }
-        }
-      };
-      if (!document.querySelector("#revelio-overlay-ancestor-style")) {
-        const style = document.createElement("style");
-        style.setAttribute("type", "text/css");
-        style.id = "revelio-overlay-ancestor-style";
-        style.innerHTML = `
-          .${revelioElementAncestorWithOverlayClass} { position: relative; }
-          .${revelioElementAncestorWithOpacityClass} { opacity: 0.2; }
-        `;
-        document.head.prepend(style);
-      }
-      const stackingContextAncestorElements = await Promise.all(this._stackingContextAncestors.map(async (ancestor) => {
-        return await this._getElement(ancestor.element);
-      }));
-      await Promise.all(this._stackingContextAncestors.map(async (ancestor, idx) => {
-        const stackingContextAncestorElement = stackingContextAncestorElements[idx];
-        ancestor.originalStyles = { ...stackingContextAncestorElement.style };
-        stackingContextAncestorElement.style.zIndex = `calc(var(--revelio-z-index) + ${idx} + 1)`;
-        const ancestorElementComputedStyle = window.getComputedStyle(stackingContextAncestorElement);
-        if (ancestorElementComputedStyle.position === "static") {
-          stackingContextAncestorElement.style.position = "relative";
-        }
-        this._addOverlayInsideElement(stackingContextAncestorElement, `ancestor-${idx}`);
-        if (ancestorElementComputedStyle.backgroundColor === "rgba(0, 0, 0, 0)") {
-          addOverlayToSiblingsWithoutHighlightedElement(stackingContextAncestorElement, this);
-        }
-      }));
-    }
-  }
-  async _highlightStepElement(element) {
-    await this._createStackedContextsOverlays(element);
-    const elementComputedStyle = window.getComputedStyle(element);
-    element.style.zIndex = (+zIndexOverlayValue + (this._stackingContextAncestors?.length ?? 0) + 1).toString();
-    if (elementComputedStyle.position === "static") {
-      element.style.position = "relative";
-    }
-    if (this._disableClick) {
-      element.style.pointerEvents = "none";
-    }
-    if (this._goNextOnClick) {
-      element.addEventListener("click", this._boundNextStep);
-    }
-    const elementRect = element.getBoundingClientRect();
-    const rootRect = this._rootElement.getBoundingClientRect();
-    const top = elementRect.top - rootRect.top;
-    const left = elementRect.left - rootRect.left;
-    const { width, height } = elementRect;
-    if (!this._disableBlink) {
-      this._createBlinkOverlay(element, top, left, width, height);
-    }
-    return {
-      position: {
-        top,
-        left
-      },
-      dimensions: {
-        width,
-        height
-      }
-    };
-  }
-  _getStep(index = this._currentIndex) {
-    const step = this._journey[index];
-    if (!step) {
-      throw this._createError(`Step ${index} not found`);
-    }
-    return step;
-  }
   _scrollStartHandler = () => {
   };
   async _highlightAndRenderDialog(stepElement) {
@@ -820,59 +700,19 @@ class Revelio {
       this._rootElement.removeChild(blinkOverlay);
     }
   }
-  async _removeStackingContextAncestorsOverlays() {
-    if (this._stackingContextAncestors) {
-      let removeWithOverlayClassFromSiblingsWithoutHighlightedElement = function(ancestorElement) {
-        const children = ancestorElement.children;
-        for (let i = 0;i < children.length; i++) {
-          const child = children[i];
-          if (child instanceof HTMLElement) {
-            child.classList.remove(revelioElementAncestorWithOverlayClass);
-            child.classList.remove(revelioElementAncestorWithOpacityClass);
-            removeWithOverlayClassFromSiblingsWithoutHighlightedElement(child);
-          }
-        }
-      };
-      await Promise.all(this._stackingContextAncestors.map(async (ancestor) => {
-        const stackingContextAncestorElement = await this._getElement(ancestor.element);
-        const ancestorElementComputedStyle = window.getComputedStyle(stackingContextAncestorElement);
-        if (ancestorElementComputedStyle.backgroundColor === "rgba(0, 0, 0, 0)") {
-          removeWithOverlayClassFromSiblingsWithoutHighlightedElement(stackingContextAncestorElement);
-          document.head.querySelector("#revelio-overlay-ancestor-style")?.remove();
-        }
-        stackingContextAncestorElement.style.zIndex = ancestor.originalStyles?.zIndex ?? "";
-        stackingContextAncestorElement.style.position = ancestor.originalStyles?.position ?? "";
-        if (!stackingContextAncestorElement.getAttribute("style")?.trim()) {
-          stackingContextAncestorElement.removeAttribute("style");
-        }
-        document.querySelectorAll(`[id^="revelio-overlay-"]`).forEach((overlay) => {
-          const overlayParent = overlay.parentElement;
-          if (overlayParent) {
-            overlayParent.removeChild(overlay);
-          }
-        });
-      }));
-    }
-  }
   async _unmountStep() {
     const step = this._getStep();
     if (step.element !== undefined) {
-      const element = await this._getElement(step.element);
-      element.style.zIndex = "";
-      element.style.position = "";
-      if (this._disableClick) {
-        element.style.pointerEvents = "";
-      }
-      if (!element.getAttribute("style")?.trim()) {
-        element.removeAttribute("style");
+      const overlay = document.querySelector("#revelio-overlay");
+      if (overlay) {
+        overlay.remove();
       }
       if (this._goNextOnClick) {
+        const element = await this._getElement(step.element);
         element.removeEventListener("click", this._boundNextStep);
       }
-      this._unmountBlinkOverlay();
     }
     this._unmountDialog();
-    await this._removeStackingContextAncestorsOverlays();
     window.removeEventListener("scroll", this._scrollStartHandler, {
       capture: true
     });
@@ -935,6 +775,72 @@ class Revelio {
     await this._mountStep();
     this._transitionBlocked = false;
     await this._onPrevAfter?.();
+  }
+  _getStep(index = this._currentIndex) {
+    const step = this._journey[index];
+    if (!step) {
+      throw this._createError(`Step ${index} not found`);
+    }
+    return step;
+  }
+  async _highlightStepElement(element) {
+    const overlay = document.createElement("div");
+    overlay.id = "revelio-overlay";
+    const rect = element.getBoundingClientRect();
+    const rootRect = this._rootElement.getBoundingClientRect();
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      display: grid;
+      z-index: ${zIndexOverlayValue};
+      grid-template: 
+        "top    top    top"    ${rect.top - rootRect.top}px
+        "left   focus  right"  ${rect.height}px
+        "bottom bottom bottom" 1fr
+        / ${rect.left - rootRect.left}px ${rect.width}px 1fr;
+    `;
+    const mask = document.createElement("div");
+    mask.style.cssText = `
+      grid-area: 1 / 1 / 4 / 4;
+      background: ${this._baseConfig.overlayColor};
+      pointer-events: auto;
+    `;
+    mask.onclick = this.skipTour.bind(this);
+    const highlight = document.createElement("div");
+    highlight.style.cssText = `
+      grid-area: focus;
+      box-shadow: 0 0 0 2px white;
+      pointer-events: ${this._disableClick ? "none" : "auto"};
+      ${!this._disableBlink ? "animation: revelio-blink 1s ease-in" : ""};
+      ${this._persistBlink ? "animation-iteration-count: infinite" : "1"};
+    `;
+    if (this._goNextOnClick) {
+      highlight.addEventListener("click", this._boundNextStep);
+    }
+    overlay.append(mask, highlight);
+    this._rootElement.appendChild(overlay);
+    if (!document.querySelector("#revelio-styles")) {
+      const style = document.createElement("style");
+      style.id = "revelio-styles";
+      style.textContent = `
+        @keyframes revelio-blink {
+          0% { opacity: 0; }
+          50% { opacity: 0.3; }
+          100% { opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    return {
+      position: {
+        top: rect.top - rootRect.top,
+        left: rect.left - rootRect.left
+      },
+      dimensions: {
+        width: rect.width,
+        height: rect.height
+      }
+    };
   }
 }
 export {

@@ -17,12 +17,6 @@ export type RevelioSharedConfig = {
      */
     preventScrollIntoView: boolean;
     /**
-     * The stacking context ancestors of the element, if any. This is useful when the element is inside a stacking context.
-     * This ensures that all the ancestors are placed above the overlay so the element is properly highlighted.
-     * TODO: explain this better in docs
-     */
-    stackingContextAncestors: (string | HTMLElement)[] | undefined;
-    /**
      * If true, disables blinking the element for the current step.
      */
     disableBlink: boolean;
@@ -225,7 +219,6 @@ export declare class Revelio {
     private _placement;
     private _fallbackPlacementToCenter;
     private _preventScrollIntoView;
-    private _stackingContextAncestors?;
     private _disableBlink;
     private _persistBlink;
     private _disableClick;
@@ -307,13 +300,6 @@ export declare class Revelio {
     private _createOrMoveRootOverlay;
     private _renderStepDialog;
     private _createBlinkOverlay;
-    private _addOverlayInsideElement;
-    private _createStackedContextsOverlays;
-    private _highlightStepElement;
-    /**
-     * Returns the step for the given index, or the current step if no index is provided
-     */
-    private _getStep;
     private _scrollStartHandler;
     private _highlightAndRenderDialog;
     /**
@@ -330,7 +316,6 @@ export declare class Revelio {
     end(): Promise<void>;
     private _unmountDialog;
     private _unmountBlinkOverlay;
-    private _removeStackingContextAncestorsOverlays;
     private _unmountStep;
     /**
      *
@@ -349,4 +334,9 @@ export declare class Revelio {
     nextStep(): Promise<void>;
     private _boundNextStep;
     prevStep(): Promise<void>;
+    /**
+     * Returns the step for the given index, or the current step if no index is provided
+     */
+    private _getStep;
+    private _highlightStepElement;
 }
