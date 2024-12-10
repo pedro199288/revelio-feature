@@ -12,6 +12,7 @@ import { Revelio } from 'revelio-feature';
 export function ExampleClient() {
   const tour = new Revelio({
     options: {
+      overlayColor: 'rgba(255, 0, 0, 0.5)',
       onEndAfter: function () {
         this.resetJourney();
       },
@@ -73,6 +74,10 @@ export function ExampleClient() {
         title: 'The dialog',
         content: 'This is the second step of the tour, the dialog',
         element: '#dialog-content',
+        options: {
+          animatedElements: ['#dialog-content'],
+          overlayColor: 'rgba(0, 0, 0, 0.0)',
+        },
       },
       {
         title: 'The button',

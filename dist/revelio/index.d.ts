@@ -166,6 +166,10 @@ export type RevelioSharedConfig = {
      * Runs after this.onEndAfter()
      */
     onDone?: (this: Revelio) => void | Promise<void>;
+    /**
+     * The color of the overlay. Can be any valid CSS color value.
+     */
+    overlayColor: string;
 };
 /**
  * Options passed to the Revelio constructor

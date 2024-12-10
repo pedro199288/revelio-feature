@@ -207,6 +207,11 @@ export type RevelioSharedConfig = {
    * Runs after this.onEndAfter()
    */
   onDone?: (this: Revelio) => void | Promise<void>;
+
+  /**
+   * The color of the overlay. Can be any valid CSS color value.
+   */
+  overlayColor: string;
 };
 
 /**
@@ -268,8 +273,10 @@ const defaultOptions: RevelioOptions = {
   overlayColor: 'rgba(0, 0, 0, 0.78)',
 };
 
-const zIndexValue = '10000';
-const zIndexOverlayValue = '9999';
+const zIndexOverlayValue = '100000';
+const zIndexElementValue = '100001';
+const zIndexMaskValue = '99999';
+const zIndexDialogValue = '100002';
 
 export class Revelio {
   private static _started: boolean;
@@ -583,7 +590,7 @@ export class Revelio {
     overlay.style.left = '0';
     overlay.style.width = '100%';
     overlay.style.height = '100%';
-    overlay.style.backgroundColor = this._baseConfig.overlayColor;
+    // overlay.style.backgroundColor = this._baseConfig.overlayColor;
     overlay.style.zIndex = zIndexOverlayValue;
     document.documentElement.style.cssText += `--revelio-z-index: ${zIndexOverlayValue};`;
     overlay.id = 'revelio-overlay';
@@ -786,7 +793,7 @@ export class Revelio {
     dialog.id = 'revelio-dialog';
     // required styles
     dialog.style.position = 'absolute';
-    dialog.style.zIndex = zIndexValue;
+    dialog.style.zIndex = zIndexDialogValue;
     // Set CSS to make it invisible until we have the correct position
     dialog.style.visibility = 'hidden';
 
@@ -970,7 +977,7 @@ export class Revelio {
     blinkOverlay.style.opacity = '0.0';
     blinkOverlay.style.boxShadow =
       '0 0 5px white, 0 0 25px white, 0 0 50px white, 0 0 100px';
-    blinkOverlay.style.zIndex = zIndexValue;
+    blinkOverlay.style.zIndex = zIndexOverlayValue;
     blinkOverlay.style.pointerEvents = 'none';
     blinkOverlay.style.borderRadius =
       window.getComputedStyle(element).borderRadius;
@@ -1234,20 +1241,28 @@ export class Revelio {
     const step = this._getStep();
 
     if (step.element !== undefined) {
-      const overlay = document.querySelector('#revelio-overlay');
-      if (overlay) {
-        overlay.remove();
+      const element = await this._getElement(step.element);
+      // Remove aria-hidden from original element
+      element.removeAttribute('aria-hidden');
+
+      // Remove the clone
+      const clone = document.querySelector('#revelio-clone');
+      if (clone) {
+        clone.remove();
       }
 
       if (this._goNextOnClick) {
-        const element = await this._getElement(step.element);
         element.removeEventListener('click', this._boundNextStep);
+      }
+
+      const overlay = document.querySelector('#revelio-overlay');
+      if (overlay) {
+        overlay.remove();
       }
     }
 
     this._unmountDialog();
 
-    // Remove scroll listener if any
     window.removeEventListener('scroll', this._scrollStartHandler, {
       capture: true,
     });
@@ -1361,11 +1376,63 @@ export class Revelio {
   }
 
   private async _highlightStepElement(element: HTMLElement) {
-    const overlay = document.createElement('div');
-    overlay.id = 'revelio-overlay';
+    // Remove any existing overlays first
+    const existingOverlays =
+      this._rootElement.querySelectorAll('#revelio-overlay');
+    existingOverlays.forEach((overlay) => overlay.remove());
 
     const rect = element.getBoundingClientRect();
     const rootRect = this._rootElement.getBoundingClientRect();
+
+    // Check if element is a portal/dialog component
+    const isDialog =
+      element.closest('[role="dialog"]') ||
+      element.closest('[data-state="open"]');
+
+    if (isDialog) {
+      // For dialogs, just adjust the z-index of the original element
+      const originalStyles = {
+        zIndex: element.style.zIndex,
+        position: element.style.position,
+      };
+      element.dataset['revelioOriginalStyles'] = JSON.stringify(originalStyles);
+      element.style.zIndex = zIndexElementValue;
+      if (window.getComputedStyle(element).position === 'static') {
+        element.style.position = 'relative';
+      }
+    } else {
+      // For regular elements, use the clone approach
+      const clone = element.cloneNode(true) as HTMLElement;
+      clone.id = 'revelio-clone';
+      clone.style.cssText = window.getComputedStyle(element).cssText;
+      clone.style.position = 'fixed';
+      clone.style.top = `${rect.top}px`;
+      clone.style.left = `${rect.left}px`;
+      clone.style.width = `${rect.width}px`;
+      clone.style.height = `${rect.height}px`;
+      clone.style.zIndex = zIndexElementValue;
+      clone.style.pointerEvents = this._disableClick ? 'none' : 'auto';
+      clone.style.margin = '0';
+      clone.style.transform = 'none';
+
+      clone.addEventListener('click', (e) => {
+        e.preventDefault();
+        element.click();
+      });
+
+      this._rootElement.appendChild(clone);
+    }
+
+    // Hide original element from screen readers
+    element.setAttribute('aria-hidden', 'true');
+
+    // Get current step to access its options
+    const step = this._getStep();
+    const overlayColor =
+      step.options?.overlayColor ?? this._baseConfig.overlayColor;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'revelio-overlay';
 
     overlay.style.cssText = `
       position: fixed;
@@ -1373,35 +1440,52 @@ export class Revelio {
       display: grid;
       z-index: ${zIndexOverlayValue};
       grid-template: 
-        "top    top    top"    ${rect.top - rootRect.top}px
+        "top    top    top"    ${rect.top}px
         "left   focus  right"  ${rect.height}px
         "bottom bottom bottom" 1fr
-        / ${rect.left - rootRect.left}px ${rect.width}px 1fr;
+        / ${rect.left}px ${rect.width}px 1fr;
+      pointer-events: all;
     `;
 
     const mask = document.createElement('div');
     mask.style.cssText = `
       grid-area: 1 / 1 / 4 / 4;
-      background: ${this._baseConfig.overlayColor};
-      pointer-events: auto;
+      background: ${overlayColor};
+      pointer-events: all;
+      z-index: ${zIndexMaskValue};
     `;
-    mask.onclick = this.skipTour.bind(this);
 
+    const preventAndSkip = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      this.skipTour();
+    };
+
+    mask.addEventListener('click', preventAndSkip, true);
+    mask.addEventListener('mousedown', preventAndSkip, true);
+    mask.addEventListener('mouseup', preventAndSkip, true);
+    mask.addEventListener('pointerdown', preventAndSkip, true);
+    mask.addEventListener('pointerup', preventAndSkip, true);
+
+    // Create the highlight frame
     const highlight = document.createElement('div');
     highlight.style.cssText = `
       grid-area: focus;
       box-shadow: 0 0 0 2px white;
-      pointer-events: ${this._disableClick ? 'none' : 'auto'};
+      background: transparent;
+      pointer-events: none;
       ${!this._disableBlink ? 'animation: revelio-blink 1s ease-in' : ''};
       ${this._persistBlink ? 'animation-iteration-count: infinite' : '1'};
     `;
 
-    if (this._goNextOnClick) {
-      highlight.addEventListener('click', this._boundNextStep);
-    }
-
     overlay.append(mask, highlight);
     this._rootElement.appendChild(overlay);
+    this._rootElement.appendChild(clone);
+
+    if (this._goNextOnClick) {
+      clone.addEventListener('click', this._boundNextStep);
+    }
 
     // Add blink animation styles if not already present
     if (!document.querySelector('#revelio-styles')) {
